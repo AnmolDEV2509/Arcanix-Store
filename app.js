@@ -1,5 +1,5 @@
 import { db, auth, onAuthStateChanged, googleProvider, signInWithPopup, signOut, signInWithEmailAndPassword, ADMIN_EMAIL } from './firebase-config.js';
-import { collection, getDocs, doc, getDoc, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, addDoc, setDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 window.cart = JSON.parse(localStorage.getItem('arcanix_cart')) || [];
 let currentUser = null;
@@ -15,7 +15,8 @@ const VECTOR_ICONS = {
   star: `<svg class="v-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
   globe: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>`,
   party: `<svg class="v-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
-  box: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`
+  box: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`,
+  phone: `<svg class="v-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`
 };
 
 // Fetch Admin Payment Config
@@ -576,7 +577,7 @@ function getUpiPayLink(total, appTarget = 'generic') {
   }
 }
 
-// CHECKOUT PAGE WITH PHONE NUMBER FIELD
+// CHECKOUT PAGE WITH PRE-FILLED SAVED USER PHONE NUMBER
 async function renderCheckoutPage() {
   if (!currentUser) {
     alert("Authentication required for checkout. Please login first.");
@@ -592,6 +593,17 @@ async function renderCheckoutPage() {
   await loadAdminPaymentSettings();
   let total = window.cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
   let selectedApp = 'generic';
+
+  // Fetch saved phone number from User document
+  let savedPhone = '';
+  try {
+    const userDocSnap = await getDoc(doc(db, "users", currentUser.uid));
+    if (userDocSnap.exists() && userDocSnap.data().phone) {
+      savedPhone = userDocSnap.data().phone;
+    }
+  } catch(e) {
+    console.error("Error loading user saved phone:", e);
+  }
   
   appContainer.innerHTML = `
     <div style="padding: 24px; background:#fff; max-width: 580px; margin: 0 auto; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
@@ -605,7 +617,7 @@ async function renderCheckoutPage() {
 
         <div style="margin-bottom:12px;">
           <label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Phone Number (WhatsApp Preferred)</label>
-          <input type="tel" id="cust-phone" required placeholder="10-digit mobile number" pattern="[0-9]{10}" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"/>
+          <input type="tel" id="cust-phone" required value="${savedPhone}" placeholder="10-digit mobile number" pattern="[0-9]{10}" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"/>
         </div>
         
         <div style="margin-bottom:14px;">
@@ -710,15 +722,19 @@ async function renderCheckoutPage() {
     e.preventDefault();
     const btn = document.getElementById('confirm-pay-btn');
     const selectedPayOption = document.querySelector('input[name="pay-mode"]:checked').value;
+    const phoneNum = document.getElementById('cust-phone').value;
 
     btn.disabled = true;
     btn.innerText = "Processing Order...";
 
     try {
+      // Auto-save phone to user profile as well
+      await setDoc(doc(db, "users", currentUser.uid), { phone: phoneNum, email: currentUser.email, updatedAt: new Date() }, { merge: true });
+
       const orderPayload = {
         customerEmail: currentUser.email,
         customerName: document.getElementById('cust-name').value,
-        customerPhone: document.getElementById('cust-phone').value,
+        customerPhone: phoneNum,
         address: document.getElementById('cust-address').value,
         paymentMode: selectedPayOption,
         items: window.cart,
@@ -801,12 +817,23 @@ function renderAuthPage() {
   };
 }
 
-// PROPER USER DASHBOARD / PROFILE PAGE
+// USER DASHBOARD / PROFILE PAGE WITH PHONE NUMBER EDIT & SAVE
 async function renderUserDashboardPage() {
   if (!currentUser) { location.hash = 'auth'; return; }
   const isAdmin = currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   const userName = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'User');
   const userInitial = userName[0].toUpperCase();
+
+  // Load User Data (Phone Number) from Firestore
+  let savedPhone = 'Not Added';
+  try {
+    const userDocSnap = await getDoc(doc(db, "users", currentUser.uid));
+    if (userDocSnap.exists() && userDocSnap.data().phone) {
+      savedPhone = userDocSnap.data().phone;
+    }
+  } catch(e) {
+    console.error("Error loading user profile doc:", e);
+  }
 
   appContainer.innerHTML = `
     <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
@@ -831,7 +858,7 @@ async function renderUserDashboardPage() {
           <h3 style="font-size: 1rem; font-weight: 700; color: #212121; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
             <span>${VECTOR_ICONS.user}</span> Account Details
           </h3>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
             <div>
               <div class="profile-label">Full Name</div>
               <div class="profile-value">${userName}</div>
@@ -840,6 +867,28 @@ async function renderUserDashboardPage() {
               <div class="profile-label">Email Address</div>
               <div class="profile-value">${currentUser.email}</div>
             </div>
+            
+            <!-- Dynamic Phone Number Field & Inline Editor -->
+            <div>
+              <div class="profile-label" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Phone Number</span>
+                <span id="edit-phone-btn" onclick="togglePhoneEdit(true)" style="color:#2874f0; font-weight:700; cursor:pointer; text-transform:none; font-size:0.75rem;">Edit</span>
+              </div>
+              
+              <div id="phone-display-view" class="profile-value" style="display:flex; align-items:center; gap:6px;">
+                <span>${VECTOR_ICONS.phone}</span>
+                <span id="current-phone-val">${savedPhone}</span>
+              </div>
+
+              <div id="phone-edit-view" style="display:none; margin-top:6px;">
+                <div style="display:flex; gap:6px;">
+                  <input type="tel" id="user-phone-input" placeholder="Enter 10-digit number" pattern="[0-9]{10}" value="${savedPhone !== 'Not Added' ? savedPhone : ''}" style="flex:1; padding:6px 9px; border:1px solid #2874f0; border-radius:4px; font-size:0.85rem;" />
+                  <button onclick="saveUserPhoneNumber()" style="padding:6px 12px; background:#2874f0; color:#fff; border:none; border-radius:4px; font-weight:700; font-size:0.8rem; cursor:pointer;">Save</button>
+                  <button onclick="togglePhoneEdit(false)" style="padding:6px 10px; background:#f0f0f0; color:#333; border:none; border-radius:4px; font-weight:600; font-size:0.8rem; cursor:pointer;">Cancel</button>
+                </div>
+              </div>
+            </div>
+
             <div>
               <div class="profile-label">Account UID</div>
               <div class="profile-value" style="font-size:0.75rem; color:#666; font-family:monospace;">${currentUser.uid}</div>
@@ -867,6 +916,36 @@ async function renderUserDashboardPage() {
 
     </div>
   `;
+
+  window.togglePhoneEdit = (show) => {
+    document.getElementById('phone-display-view').style.display = show ? 'none' : 'flex';
+    document.getElementById('phone-edit-view').style.display = show ? 'block' : 'none';
+    document.getElementById('edit-phone-btn').style.display = show ? 'none' : 'inline';
+  };
+
+  window.saveUserPhoneNumber = async () => {
+    const input = document.getElementById('user-phone-input');
+    const phoneVal = input.value.trim();
+
+    if (!/^[0-9]{10}$/.test(phoneVal)) {
+      alert("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    try {
+      await setDoc(doc(db, "users", currentUser.uid), {
+        email: currentUser.email,
+        phone: phoneVal,
+        updatedAt: new Date()
+      }, { merge: true });
+
+      document.getElementById('current-phone-val').innerText = phoneVal;
+      togglePhoneEdit(false);
+      alert("Phone number updated successfully!");
+    } catch(err) {
+      alert("Failed to update phone number: " + err.message);
+    }
+  };
 
   document.getElementById('so-btn').onclick = () => signOut(auth).then(() => location.hash = 'auth');
 
