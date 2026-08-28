@@ -1,5 +1,5 @@
 import { db, auth, onAuthStateChanged, ADMIN_EMAIL } from './firebase-config.js';
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 let adminUpiConfig = { upiId: 'merchant@upi', merchantName: 'ArcanixPlus' };
 let editingProductId = null;
@@ -130,7 +130,7 @@ async function renderAdminUI() {
   `;
 
   bindEvents();
-  loadCategoryDropdown();
+  await loadCategoryDropdown();
   loadOrders();
   loadCategoriesTable();
   loadBannersTable();
@@ -162,7 +162,7 @@ function bindEvents() {
       await addDoc(collection(db, "categories"), { name, createdAt: new Date() });
       alert(`Category "${name}" added!`);
       document.getElementById('admin-cat-form').reset();
-      loadCategoryDropdown();
+      await loadCategoryDropdown();
       loadCategoriesTable();
     } catch(err) { alert("Error: " + err.message); }
   };
@@ -247,7 +247,7 @@ window.deleteItem = async (colName, id) => {
     try {
       await deleteDoc(doc(db, colName, id));
       alert("Deleted!");
-      if (colName === 'categories') { loadCategoriesTable(); loadCategoryDropdown(); }
+      if (colName === 'categories') { loadCategoriesTable(); await loadCategoryDropdown(); }
       if (colName === 'banners') loadBannersTable();
       if (colName === 'products') loadProductsTable();
     } catch(err) { alert("Error deleting: " + err.message); }
@@ -265,6 +265,7 @@ window.updateOrderStatus = async (orderId, newStatus) => {
 // Data Loaders
 async function loadCategoryDropdown() {
   const select = document.getElementById('p-category');
+  if (!select) return;
   try {
     const snap = await getDocs(collection(db, "categories"));
     select.innerHTML = '<option value="General">General</option>';
@@ -280,7 +281,8 @@ async function loadCategoryDropdown() {
 async function loadOrders() {
   const container = document.getElementById('admin-orders-list');
   try {
-    const snap = await getDocs(collection(db, "orders"));
+    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
     if (snap.empty) { container.innerHTML = '<p style="color:#666;">No orders found.</p>'; return; }
     container.innerHTML = `
       <table>
