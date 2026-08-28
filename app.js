@@ -110,6 +110,9 @@ function injectResponsiveStyles() {
     .status-Shipped { background: #e2e3e5; color: #383d41; }
     .status-Delivered { background: #d4edda; color: #155724; }
     .status-Cancelled { background: #f8d7da; color: #721c24; }
+
+    .payment-option { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; }
+    .payment-option.active { border-color: #2874f0; background: #f0f7ff; }
   `;
   document.head.appendChild(style);
 }
@@ -486,7 +489,7 @@ async function renderProductDetailPage(params) {
           <div class="rating-badge">4.5 ${VECTOR_ICONS.star}</div>
           <div style="font-size:0.85rem; color:#878787; font-weight:600; margin-bottom:14px; margin-top: 6px;">Category: ${p.category || 'General'}</div>
           <div style="margin-bottom: 20px; border-bottom:1px solid #f0f0f0; padding-bottom:14px;">
-            <span style="font-size: 1.6rem; font-weight:800; color:#212121;">$${p.price}</span>
+            <span style="font-size: 1.6rem; font-weight:800; color:#212121;">₹${p.price}</span>
             ${p.tag ? `<span style="color:#388e3c; font-size:0.85rem; font-weight:700; margin-left:12px;">${p.tag}</span>` : ''}
           </div>
           <h4 style="margin-bottom: 8px; font-size: 0.9rem; font-weight:700; color:#212121;">Product Details:</h4>
@@ -528,7 +531,7 @@ function renderCartPage() {
             <img src="${item.image}" style="width: 65px; height: 65px; object-fit: contain;"/>
             <div style="flex: 1;">
               <h4 style="font-size: 0.88rem; font-weight:500; margin-bottom: 6px; color:#212121;">${item.title}</h4>
-              <div><span style="font-weight:700; font-size: 1rem; color:#212121;">$${item.price}</span></div>
+              <div><span style="font-weight:700; font-size: 1rem; color:#212121;">₹${item.price}</span></div>
               <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
                 <button class="qty-btn" onclick="changeCartQty(${idx}, -1)">-</button>
                 <span style="font-weight:600; font-size:0.9rem;">${item.quantity || 1}</span>
@@ -551,7 +554,7 @@ function renderCartPage() {
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 18px; font-weight: 800; border-top: 1px dashed #e0e0e0; padding-top: 14px; font-size: 1.05rem;">
           <span>Total Amount</span>
-          <span>$${total.toFixed(2)}</span>
+          <span>₹${total.toFixed(2)}</span>
         </div>
         <button onclick="location.hash='checkout'" style="width: 100%; padding: 12px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:2px; cursor:pointer; font-size:0.9rem;">PLACE ORDER</button>
       </div>
@@ -559,39 +562,119 @@ function renderCartPage() {
   `;
 }
 
-// 8. CHECKOUT PAGE (Saves Orders Realtime to Firestore)
+// 8. CHECKOUT PAGE (With Payment Options & Interactive Pay Now UI)
 function renderCheckoutPage() {
   if (window.cart.length === 0) {
     location.hash = 'cart';
     return;
   }
   let total = window.cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+  
   appContainer.innerHTML = `
-    <div style="padding: 24px; background:#fff; max-width: 550px; margin: 0 auto; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-      <h2 style="margin-bottom: 18px; font-size: 1.15rem; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">Order Summary ($${total.toFixed(2)})</h2>
+    <div style="padding: 24px; background:#fff; max-width: 580px; margin: 0 auto; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      <h2 style="margin-bottom: 18px; font-size: 1.15rem; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">Order Summary (₹${total.toFixed(2)})</h2>
+      
       <form id="checkout-form">
-        <div style="margin-bottom:12px;"><label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Full Name</label><input type="text" id="cust-name" required placeholder="John Doe" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:2px; font-size:0.9rem;"/></div>
-        <div style="margin-bottom:14px;"><label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Delivery Address</label><textarea id="cust-address" required placeholder="Enter complete address..." style="width:100%; height:80px; padding:10px; border:1px solid #ccc; border-radius:2px; font-size:0.9rem;"></textarea></div>
-        <div style="margin-bottom:20px;"><label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Payment Mode</label>
-          <select id="cust-pay-mode" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:2px; font-size:0.9rem;"><option>UPI / NetBanking</option><option>Credit / Debit Card</option><option>Cash on Delivery</option></select>
+        <div style="margin-bottom:12px;">
+          <label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Full Name</label>
+          <input type="text" id="cust-name" required placeholder="John Doe" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"/>
         </div>
-        <button type="submit" id="confirm-pay-btn" style="width: 100%; padding: 12px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:2px; cursor:pointer; font-size:0.95rem;">CONFIRM & PAY</button>
+        
+        <div style="margin-bottom:14px;">
+          <label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Delivery Address</label>
+          <textarea id="cust-address" required placeholder="Enter complete delivery address..." style="width:100%; height:75px; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"></textarea>
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <label style="display:block; font-size:0.85rem; margin-bottom:8px; font-weight:600;">Select Payment Method</label>
+          
+          <div class="payment-option active" onclick="selectPaymentMode('UPI')">
+            <input type="radio" name="pay-mode" id="pay-upi" value="UPI Instant QR" checked />
+            <label for="pay-upi" style="font-weight:600; font-size:0.88rem; cursor:pointer; flex:1;">
+              UPI / QR Code (PhonePe, GPay, Paytm)
+            </label>
+          </div>
+
+          <div class="payment-option" onclick="selectPaymentMode('Card')">
+            <input type="radio" name="pay-mode" id="pay-card" value="Credit / Debit Card" />
+            <label for="pay-card" style="font-weight:600; font-size:0.88rem; cursor:pointer; flex:1;">
+              Credit / Debit Card
+            </label>
+          </div>
+
+          <div class="payment-option" onclick="selectPaymentMode('COD')">
+            <input type="radio" name="pay-mode" id="pay-cod" value="Cash on Delivery" />
+            <label for="pay-cod" style="font-weight:600; font-size:0.88rem; cursor:pointer; flex:1;">
+              Cash on Delivery (COD)
+            </label>
+          </div>
+        </div>
+
+        <!-- Dynamic Payment Section -->
+        <div id="payment-details-box" style="margin-bottom:20px; padding:14px; border:1px dashed #2874f0; background:#f4f8ff; border-radius:6px; text-align:center;">
+          <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan & Pay ₹${total.toFixed(2)} using any UPI App:</p>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=merchant@upi%26pn=ArcanixPlus%26am=${total}%26cu=INR" alt="UPI QR Code" style="border:2px solid #fff; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.1); margin-bottom:6px;" />
+          <p style="font-size:0.75rem; color:#666;">Scan QR code with GPay/PhonePe to complete payment instant.</p>
+        </div>
+
+        <button type="submit" id="confirm-pay-btn" style="width: 100%; padding: 13px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:4px; cursor:pointer; font-size:0.95rem; box-shadow:0 2px 4px rgba(0,0,0,0.15);">
+          PAY NOW (₹${total.toFixed(2)})
+        </button>
       </form>
     </div>
   `;
 
+  window.selectPaymentMode = (type) => {
+    document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('active'));
+    const payBox = document.getElementById('payment-details-box');
+    const payBtn = document.getElementById('confirm-pay-btn');
+
+    if (type === 'UPI') {
+      document.getElementById('pay-upi').checked = true;
+      document.getElementById('pay-upi').closest('.payment-option').classList.add('active');
+      payBox.style.display = 'block';
+      payBox.innerHTML = `
+        <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan & Pay ₹${total.toFixed(2)} using any UPI App:</p>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=merchant@upi%26pn=ArcanixPlus%26am=${total}%26cu=INR" alt="UPI QR Code" style="border:2px solid #fff; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.1); margin-bottom:6px;" />
+        <p style="font-size:0.75rem; color:#666;">Scan QR code with GPay/PhonePe to complete instant payment.</p>
+      `;
+      payBtn.innerText = `PAY NOW (₹${total.toFixed(2)})`;
+    } else if (type === 'Card') {
+      document.getElementById('pay-card').checked = true;
+      document.getElementById('pay-card').closest('.payment-option').classList.add('active');
+      payBox.style.display = 'block';
+      payBox.innerHTML = `
+        <div style="text-align:left;">
+          <input type="text" placeholder="Card Number (16 digits)" style="width:100%; padding:8px; margin-bottom:8px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem;" />
+          <div style="display:flex; gap:8px;">
+            <input type="text" placeholder="MM/YY" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem;" />
+            <input type="password" placeholder="CVV" maxlength="3" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem;" />
+          </div>
+        </div>
+      `;
+      payBtn.innerText = `PAY NOW (₹${total.toFixed(2)})`;
+    } else {
+      document.getElementById('pay-cod').checked = true;
+      document.getElementById('pay-cod').closest('.payment-option').classList.add('active');
+      payBox.style.display = 'none';
+      payBtn.innerText = `PLACE COD ORDER (₹${total.toFixed(2)})`;
+    }
+  };
+
   document.getElementById('checkout-form').onsubmit = async (e) => {
     e.preventDefault();
     const btn = document.getElementById('confirm-pay-btn');
+    const selectedPayOption = document.querySelector('input[name="pay-mode"]:checked').value;
+    
     btn.disabled = true;
-    btn.innerText = "Processing Order...";
+    btn.innerText = "Processing Payment & Order...";
 
     try {
       const orderPayload = {
         customerEmail: currentUser ? currentUser.email : 'Guest User',
         customerName: document.getElementById('cust-name').value,
         address: document.getElementById('cust-address').value,
-        paymentMode: document.getElementById('cust-pay-mode').value,
+        paymentMode: selectedPayOption,
         items: window.cart,
         totalAmount: total,
         status: 'Pending',
@@ -605,9 +688,9 @@ function renderCheckoutPage() {
       updateCartBadge();
       location.hash = 'order-confirmation';
     } catch (err) {
-      alert("Error placing order: " + err.message);
+      alert("Error processing payment: " + err.message);
       btn.disabled = false;
-      btn.innerText = "CONFIRM & PAY";
+      btn.innerText = `PAY NOW (₹${total.toFixed(2)})`;
     }
   };
 }
@@ -617,9 +700,9 @@ function renderOrderConfirmationPage() {
   appContainer.innerHTML = `
     <div style="text-align: center; padding: 50px 16px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
       <h2 style="color: #388e3c; font-size: 1.4rem; margin-bottom:8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-        ${VECTOR_ICONS.party} Order Placed Successfully!
+        ${VECTOR_ICONS.party} Order & Payment Received!
       </h2>
-      <p style="margin-bottom: 24px; color:#666; font-size: 0.9rem;">Your order details have been received and are being processed by admin.</p>
+      <p style="margin-bottom: 24px; color:#666; font-size: 0.9rem;">Your order details have been saved successfully and are being processed.</p>
       <a href="#home" style="display:inline-block; padding:12px 28px; background:#2874f0; color:#fff; text-decoration:none; border-radius:2px; font-weight:700;">Continue Shopping</a>
     </div>
   `;
@@ -680,7 +763,7 @@ function renderUserDashboardPage() {
   document.getElementById('so-btn').onclick = () => signOut(auth).then(() => location.hash = 'auth');
 }
 
-// 12. ADMIN DASHBOARD (With Full Order Management)
+// 12. ADMIN DASHBOARD
 async function renderSellerDashboardPage() {
   if (!currentUser || (currentUser.email && currentUser.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase())) {
     appContainer.innerHTML = `<div style="padding:20px; background:#fff;"><h2>Access Denied</h2><p>Only authorized admin can access this page.</p></div>`;
@@ -721,7 +804,7 @@ async function renderSellerDashboardPage() {
               <option value="General">General</option>
             </select>
           </div>
-          <div style="flex: 1 1 180px; margin-bottom:8px;"><label style="font-size:0.8rem;">Price ($)</label><input type="number" step="0.01" id="p-price" required placeholder="49.99" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
+          <div style="flex: 1 1 180px; margin-bottom:8px;"><label style="font-size:0.8rem;">Price (₹)</label><input type="number" step="0.01" id="p-price" required placeholder="499" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <div style="flex: 1 1 180px; margin-bottom:8px;"><label style="font-size:0.8rem;">Offer Tag</label><input type="text" id="p-tag" placeholder="Hot Deal" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <div style="flex: 1 1 100%; margin-bottom:8px;"><label style="font-size:0.8rem;">Image URL</label><input type="url" id="p-image" required placeholder="https://..." style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <div style="flex: 1 1 100%; margin-bottom:12px;"><label style="font-size:0.8rem;">Description</label><textarea id="p-desc" rows="2" required placeholder="Product specifications..." style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"></textarea></div>
@@ -843,7 +926,7 @@ async function renderSellerDashboardPage() {
                     <span style="font-size:0.78rem; color:#444;">${o.address || 'No Address'}</span>
                   </td>
                   <td style="padding:10px; vertical-align:top;">
-                    <b>$${(o.totalAmount || 0).toFixed(2)}</b><br/>
+                    <b>₹${(o.totalAmount || 0).toFixed(2)}</b><br/>
                     <span style="font-size:0.75rem; color:#666;">${o.paymentMode || ''}</span>
                   </td>
                   <td style="padding:10px; vertical-align:top;">
@@ -1020,7 +1103,7 @@ async function renderSellerDashboardPage() {
               <tr style="border-bottom: 1px solid #eee;">
                 <td style="padding:6px;"><img src="${data.imageUrl}" style="width: 36px; height: 36px; object-fit: contain;"/></td>
                 <td style="padding:6px;"><b>${data.title}</b></td>
-                <td style="padding:6px;">$${data.price}</td>
+                <td style="padding:6px;">₹${data.price}</td>
                 <td style="padding:6px;">
                   <button onclick="startEditProduct('${docSnap.id}')" style="background:#2874f0; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer; margin-right:4px;">Edit</button>
                   <button onclick="deleteItemByAdmin('products', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer;">Delete</button>
@@ -1066,7 +1149,7 @@ async function fetchProductsGrid(container, searchQuery = '', categoryFilter = '
             <div class="product-card-title">${p.title}</div>
             <div class="rating-badge">4.5 ${VECTOR_ICONS.star}</div>
             <div class="price-row">
-              <span class="main-price">$${p.price}</span>
+              <span class="main-price">₹${p.price}</span>
               ${p.tag ? `<span class="offer-tag">${p.tag}</span>` : ''}
             </div>
           </div>
