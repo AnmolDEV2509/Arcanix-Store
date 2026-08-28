@@ -533,16 +533,11 @@ function renderCartPage() {
   `;
 }
 
-// Dynamic Admin UPI Link Builder & Dynamic App Intent
+// Dynamic Admin UPI Link Builder
 function getUpiPayLink(total) {
   const upiId = encodeURIComponent(adminUpiConfig.upiId || 'merchant@upi');
   const merchantName = encodeURIComponent(adminUpiConfig.merchantName || 'ArcanixPlus');
   return `upi://pay?pa=${upiId}&pn=${merchantName}&am=${total.toFixed(2)}&cu=INR`;
-}
-
-function getDynamicUpiQrUrl(total) {
-  const upiPayload = getUpiPayLink(total);
-  return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(upiPayload)}`;
 }
 
 // CHECKOUT PAGE
@@ -573,9 +568,9 @@ async function renderCheckoutPage() {
           <label style="display:block; font-size:0.85rem; margin-bottom:8px; font-weight:600;">Select Payment Method</label>
           
           <div class="payment-option active" onclick="selectPaymentMode('UPI')">
-            <input type="radio" name="pay-mode" id="pay-upi" value="UPI Instant QR" checked />
+            <input type="radio" name="pay-mode" id="pay-upi" value="UPI Payment App" checked />
             <label for="pay-upi" style="font-weight:600; font-size:0.88rem; cursor:pointer; flex:1;">
-              UPI / Direct App (PhonePe, GPay, Paytm)
+              UPI App (GPay, PhonePe, Paytm, etc.)
             </label>
           </div>
 
@@ -594,12 +589,10 @@ async function renderCheckoutPage() {
           </div>
         </div>
 
-        <!-- Dynamic Payment Section with Admin QR -->
-        <div id="payment-details-box" style="margin-bottom:20px; padding:14px; border:1px dashed #2874f0; background:#f4f8ff; border-radius:6px; text-align:center;">
-          <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan or Tap to Pay ₹${total.toFixed(2)} (${adminUpiConfig.merchantName}):</p>
-          <img src="${getDynamicUpiQrUrl(total)}" alt="UPI QR Code" style="border:2px solid #fff; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.1); margin-bottom:6px;" />
-          <p style="font-size:0.78rem; font-weight:700; color:#2874f0; margin-bottom:2px;">UPI ID: ${adminUpiConfig.upiId}</p>
-          <p style="font-size:0.75rem; color:#666;">Mobile users: Pressing PAY NOW will open your default UPI app directly.</p>
+        <!-- Dynamic Payment Info Box (No QR) -->
+        <div id="payment-details-box" style="margin-bottom:20px; padding:14px; border:1px solid #2874f0; background:#f4f8ff; border-radius:6px; text-align:center;">
+          <p style="font-size:0.88rem; font-weight:600; color:#333; margin-bottom:4px;">Direct UPI Payment App Integration</p>
+          <p style="font-size:0.80rem; color:#555;">Clicking <b>PAY NOW</b> will automatically open your phone's UPI payment application with the pre-filled total amount of ₹${total.toFixed(2)}.</p>
         </div>
 
         <button type="submit" id="confirm-pay-btn" style="width: 100%; padding: 13px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:4px; cursor:pointer; font-size:0.95rem; box-shadow:0 2px 4px rgba(0,0,0,0.15);">
@@ -619,10 +612,8 @@ async function renderCheckoutPage() {
       document.getElementById('pay-upi').closest('.payment-option').classList.add('active');
       payBox.style.display = 'block';
       payBox.innerHTML = `
-        <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan or Tap to Pay ₹${total.toFixed(2)} (${adminUpiConfig.merchantName}):</p>
-        <img src="${getDynamicUpiQrUrl(total)}" alt="UPI QR Code" style="border:2px solid #fff; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.1); margin-bottom:6px;" />
-        <p style="font-size:0.78rem; font-weight:700; color:#2874f0; margin-bottom:2px;">UPI ID: ${adminUpiConfig.upiId}</p>
-        <p style="font-size:0.75rem; color:#666;">Mobile users: Pressing PAY NOW will open your default UPI app directly.</p>
+        <p style="font-size:0.88rem; font-weight:600; color:#333; margin-bottom:4px;">Direct UPI Payment App Integration</p>
+        <p style="font-size:0.80rem; color:#555;">Clicking <b>PAY NOW</b> will automatically open your phone's UPI payment application with the pre-filled total amount of ₹${total.toFixed(2)}.</p>
       `;
       payBtn.innerText = `PAY NOW (₹${total.toFixed(2)})`;
     } else if (type === 'Card') {
@@ -653,7 +644,18 @@ async function renderCheckoutPage() {
     const selectedPayOption = document.querySelector('input[name="pay-mode"]:checked').value;
     
     btn.disabled = true;
-    btn.innerText = "Processing Payment & Order...";
+    btn.innerText = "Processing Order...";
+
+    // Trigger UPI intent immediately on user click to avoid browser restrictions
+    if (selectedPayOption.includes('UPI')) {
+      const upiDeepLink = getUpiPayLink(total);
+      const link = document.createElement('a');
+      link.href = upiDeepLink;
+      link.rel = 'noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
 
     try {
       const orderPayload = {
@@ -667,26 +669,19 @@ async function renderCheckoutPage() {
         createdAt: new Date()
       };
 
-      // 1. Save Order to Database
+      // Save Order to Database in background
       await addDoc(collection(db, "orders"), orderPayload);
-
-      // 2. Direct user to UPI App if UPI mode was selected
-      if (selectedPayOption.includes('UPI')) {
-        const upiDeepLink = getUpiPayLink(total);
-        window.location.href = upiDeepLink;
-      }
 
       window.cart = [];
       localStorage.removeItem('arcanix_cart');
       updateCartBadge();
       
-      // Delay navigation slightly so payment app intent triggers smoothly on mobile devices
       setTimeout(() => {
         location.hash = 'order-confirmation';
-      }, 500);
+      }, 800);
 
     } catch (err) {
-      alert("Error processing payment: " + err.message);
+      alert("Error saving order: " + err.message);
       btn.disabled = false;
       btn.innerText = `PAY NOW (₹${total.toFixed(2)})`;
     }
