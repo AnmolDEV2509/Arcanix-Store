@@ -150,7 +150,7 @@ function setupResponsiveHeader() {
         <span>Arcanix Menu</span>
         <span style="cursor:pointer;" onclick="toggleDrawer(false)">✕</span>
       </div>
-      <div class="drawer-links">
+      <div class="drawer-links" id="drawer-menu-links">
         <a href="#home" onclick="toggleDrawer(false)"><span>🏠</span> Home</a>
         <a href="#cart" onclick="toggleDrawer(false)"><span>🛒</span> My Cart</a>
         <a href="#account" onclick="toggleDrawer(false)"><span>👤</span> My Account</a>
@@ -215,7 +215,10 @@ window.addEventListener('DOMContentLoaded', navigate);
 function updateNavState() {
   const authText = document.getElementById('auth-btn-text');
   const authBtn = document.getElementById('account-nav-btn');
+  const drawerLinks = document.getElementById('drawer-menu-links');
   if (!authText || !authBtn) return;
+
+  const isAdmin = currentUser && currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   if (currentUser) {
     authText.innerText = currentUser.displayName ? currentUser.displayName.split(' ')[0] : 'Account';
@@ -223,6 +226,15 @@ function updateNavState() {
   } else {
     authText.innerText = 'Login';
     authBtn.href = '#auth';
+  }
+
+  if (drawerLinks) {
+    drawerLinks.innerHTML = `
+      <a href="#home" onclick="toggleDrawer(false)"><span>🏠</span> Home</a>
+      <a href="#cart" onclick="toggleDrawer(false)"><span>🛒</span> My Cart</a>
+      <a href="#account" onclick="toggleDrawer(false)"><span>👤</span> My Account</a>
+      ${isAdmin ? `<a href="#seller-dashboard" onclick="toggleDrawer(false)" style="color:#2874f0; font-weight:700;"><span>⚙️</span> CMS Admin Dashboard</a>` : ''}
+    `;
   }
 }
 
@@ -255,6 +267,7 @@ window.changeCartQty = (index, delta) => {
     }
     localStorage.setItem('arcanix_cart', JSON.stringify(window.cart));
     renderCartPage();
+    updateCartBadge();
   }
 };
 
@@ -262,6 +275,7 @@ window.removeFromCart = (index) => {
   window.cart.splice(index, 1);
   localStorage.setItem('arcanix_cart', JSON.stringify(window.cart));
   renderCartPage();
+  updateCartBadge();
 };
 
 window.deleteItemByAdmin = async (colName, id) => {
@@ -699,6 +713,9 @@ async function renderSellerDashboardPage() {
       <h4 style="margin-bottom: 12px; margin-top: 28px; font-size:1.05rem; color:#2874f0;">📦 Customer Order Management</h4>
       <div id="admin-orders-list" style="overflow-x: auto; margin-bottom: 30px;"></div>
 
+      <h4 style="margin-bottom: 12px; font-size:0.95rem;">Manage Categories</h4>
+      <div id="admin-categories-list" style="overflow-x: auto; margin-bottom: 24px;"></div>
+
       <h4 style="margin-bottom: 12px; font-size:0.95rem;">Manage Live Hero Banners</h4>
       <div id="admin-banners-list" style="overflow-x: auto; margin-bottom: 24px;"></div>
 
@@ -728,6 +745,35 @@ async function renderSellerDashboardPage() {
   }
 
   await populateCategoryDropdown();
+
+  // Render Categories Table in CMS
+  const categoriesContainer = document.getElementById('admin-categories-list');
+  try {
+    const catSnap = await getDocs(collection(db, "categories"));
+    if (catSnap.empty) {
+      categoriesContainer.innerHTML = '<p style="color:#878787; font-size:0.85rem;">No custom categories created yet.</p>';
+    } else {
+      categoriesContainer.innerHTML = `
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <thead><tr style="border-bottom: 2px solid #e0e0e0; text-align:left;"><th style="padding:8px;">Icon</th><th style="padding:8px;">Category Name</th><th style="padding:8px;">Action</th></tr></thead>
+          <tbody>
+            ${catSnap.docs.map(docSnap => {
+              const c = docSnap.data();
+              return `
+                <tr style="border-bottom: 1px solid #eee;">
+                  <td style="padding:6px; font-size:1.1rem;">${c.icon || '📦'}</td>
+                  <td style="padding:6px;"><b>${c.name}</b></td>
+                  <td style="padding:6px;"><button onclick="deleteItemByAdmin('categories', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer;">Delete</button></td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+  } catch(err) {
+    categoriesContainer.innerHTML = '<p style="color:#d32f2f;">Error fetching categories.</p>';
+  }
 
   // Load Customer Orders
   const ordersContainer = document.getElementById('admin-orders-list');
@@ -843,7 +889,7 @@ async function renderSellerDashboardPage() {
 
       alert(`Category "${catName}" added!`);
       document.getElementById('admin-cat-form').reset();
-      await populateCategoryDropdown();
+      renderSellerDashboardPage();
     } catch (err) {
       alert("Error adding category: " + err.message);
     } finally {
