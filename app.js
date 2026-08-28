@@ -17,7 +17,7 @@ const VECTOR_ICONS = {
   party: `<svg class="v-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
 };
 
-// Fetch Admin Payment Config (for customer checkout)
+// Fetch Admin Payment Config
 async function loadAdminPaymentSettings() {
   try {
     const snap = await getDoc(doc(db, "settings", "payment"));
@@ -533,11 +533,15 @@ function renderCartPage() {
   `;
 }
 
-// Helper: Dynamic Admin UPI Link Builder
-function getDynamicUpiQrUrl(total) {
+// Dynamic Admin UPI Link Builder & Dynamic App Intent
+function getUpiPayLink(total) {
   const upiId = encodeURIComponent(adminUpiConfig.upiId || 'merchant@upi');
   const merchantName = encodeURIComponent(adminUpiConfig.merchantName || 'ArcanixPlus');
-  const upiPayload = `upi://pay?pa=${upiId}&pn=${merchantName}&am=${total}&cu=INR`;
+  return `upi://pay?pa=${upiId}&pn=${merchantName}&am=${total.toFixed(2)}&cu=INR`;
+}
+
+function getDynamicUpiQrUrl(total) {
+  const upiPayload = getUpiPayLink(total);
   return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(upiPayload)}`;
 }
 
@@ -571,7 +575,7 @@ async function renderCheckoutPage() {
           <div class="payment-option active" onclick="selectPaymentMode('UPI')">
             <input type="radio" name="pay-mode" id="pay-upi" value="UPI Instant QR" checked />
             <label for="pay-upi" style="font-weight:600; font-size:0.88rem; cursor:pointer; flex:1;">
-              UPI / QR Code (PhonePe, GPay, Paytm)
+              UPI / Direct App (PhonePe, GPay, Paytm)
             </label>
           </div>
 
@@ -592,10 +596,10 @@ async function renderCheckoutPage() {
 
         <!-- Dynamic Payment Section with Admin QR -->
         <div id="payment-details-box" style="margin-bottom:20px; padding:14px; border:1px dashed #2874f0; background:#f4f8ff; border-radius:6px; text-align:center;">
-          <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan & Pay ₹${total.toFixed(2)} using any UPI App (${adminUpiConfig.merchantName}):</p>
+          <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan or Tap to Pay ₹${total.toFixed(2)} (${adminUpiConfig.merchantName}):</p>
           <img src="${getDynamicUpiQrUrl(total)}" alt="UPI QR Code" style="border:2px solid #fff; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.1); margin-bottom:6px;" />
           <p style="font-size:0.78rem; font-weight:700; color:#2874f0; margin-bottom:2px;">UPI ID: ${adminUpiConfig.upiId}</p>
-          <p style="font-size:0.75rem; color:#666;">Scan QR code with GPay/PhonePe to complete instant payment.</p>
+          <p style="font-size:0.75rem; color:#666;">Mobile users: Pressing PAY NOW will open your default UPI app directly.</p>
         </div>
 
         <button type="submit" id="confirm-pay-btn" style="width: 100%; padding: 13px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:4px; cursor:pointer; font-size:0.95rem; box-shadow:0 2px 4px rgba(0,0,0,0.15);">
@@ -615,10 +619,10 @@ async function renderCheckoutPage() {
       document.getElementById('pay-upi').closest('.payment-option').classList.add('active');
       payBox.style.display = 'block';
       payBox.innerHTML = `
-        <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan & Pay ₹${total.toFixed(2)} using any UPI App (${adminUpiConfig.merchantName}):</p>
+        <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan or Tap to Pay ₹${total.toFixed(2)} (${adminUpiConfig.merchantName}):</p>
         <img src="${getDynamicUpiQrUrl(total)}" alt="UPI QR Code" style="border:2px solid #fff; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.1); margin-bottom:6px;" />
         <p style="font-size:0.78rem; font-weight:700; color:#2874f0; margin-bottom:2px;">UPI ID: ${adminUpiConfig.upiId}</p>
-        <p style="font-size:0.75rem; color:#666;">Scan QR code with GPay/PhonePe to complete instant payment.</p>
+        <p style="font-size:0.75rem; color:#666;">Mobile users: Pressing PAY NOW will open your default UPI app directly.</p>
       `;
       payBtn.innerText = `PAY NOW (₹${total.toFixed(2)})`;
     } else if (type === 'Card') {
@@ -663,12 +667,24 @@ async function renderCheckoutPage() {
         createdAt: new Date()
       };
 
+      // 1. Save Order to Database
       await addDoc(collection(db, "orders"), orderPayload);
+
+      // 2. Direct user to UPI App if UPI mode was selected
+      if (selectedPayOption.includes('UPI')) {
+        const upiDeepLink = getUpiPayLink(total);
+        window.location.href = upiDeepLink;
+      }
 
       window.cart = [];
       localStorage.removeItem('arcanix_cart');
       updateCartBadge();
-      location.hash = 'order-confirmation';
+      
+      // Delay navigation slightly so payment app intent triggers smoothly on mobile devices
+      setTimeout(() => {
+        location.hash = 'order-confirmation';
+      }, 500);
+
     } catch (err) {
       alert("Error processing payment: " + err.message);
       btn.disabled = false;
@@ -682,7 +698,7 @@ function renderOrderConfirmationPage() {
   appContainer.innerHTML = `
     <div style="text-align: center; padding: 50px 16px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
       <h2 style="color: #388e3c; font-size: 1.4rem; margin-bottom:8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-        ${VECTOR_ICONS.party} Order & Payment Received!
+        ${VECTOR_ICONS.party} Order Received!
       </h2>
       <p style="margin-bottom: 24px; color:#666; font-size: 0.9rem;">Your order details have been saved successfully and are being processed.</p>
       <a href="#home" style="display:inline-block; padding:12px 28px; background:#2874f0; color:#fff; text-decoration:none; border-radius:2px; font-weight:700;">Continue Shopping</a>
