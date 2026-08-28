@@ -1,8 +1,9 @@
 import { db, auth, onAuthStateChanged, googleProvider, signInWithPopup, signOut, signInWithEmailAndPassword, ADMIN_EMAIL } from './firebase-config.js';
-import { collection, getDocs, doc, getDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 window.cart = JSON.parse(localStorage.getItem('arcanix_cart')) || [];
 let currentUser = null;
+let editingProductId = null;
 
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
@@ -24,7 +25,7 @@ const routes = {
 
 const appContainer = document.getElementById('app-view');
 
-// 1. CSS Injection & Modern Clean UI
+// 1. CSS Stylesheet Injection
 function injectResponsiveStyles() {
   if (document.getElementById('responsive-custom-styles')) return;
   const style = document.createElement('style');
@@ -42,7 +43,6 @@ function injectResponsiveStyles() {
     .brand-logo { font-size: 1.35rem; font-weight: 800; color: #fff; text-decoration: none; font-style: italic; letter-spacing: -0.5px; }
     .brand-logo span { color: #ffe500; font-style: normal; }
 
-    /* Clean Integrated Search Bar */
     .header-search-box { flex: 1; max-width: 550px; position: relative; display: flex; align-items: center; }
     .header-search-box input { width: 100%; padding: 9px 40px 9px 14px; border: none; border-radius: 4px; outline: none; font-size: 0.9rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
     .header-search-box button { position: absolute; right: 4px; background: none; border: none; cursor: pointer; font-size: 1rem; padding: 6px 10px; color: #2874f0; }
@@ -62,7 +62,6 @@ function injectResponsiveStyles() {
       .hamburger-btn { display: none !important; }
     }
 
-    /* Product Grid Layout */
     .products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
     @media (min-width: 600px) { .products-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
     @media (min-width: 900px) { .products-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; } }
@@ -77,20 +76,20 @@ function injectResponsiveStyles() {
     .main-price { font-size: 1rem; font-weight: 700; color: #212121; }
     .offer-tag { font-size: 0.75rem; font-weight: 700; color: #388e3c; }
 
-    /* Side Navigation Drawer */
     .side-drawer { position: fixed; top: 0; left: -280px; width: 270px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.25); z-index: 10000; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .side-drawer.open { left: 0; }
     .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: none; }
     .drawer-overlay.active { display: block; }
     .drawer-header { background: #2874f0; color: #fff; padding: 16px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
     .drawer-links a { padding: 14px 16px; color: #333; text-decoration: none; font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #f0f0f0; }
+    
+    .qty-btn { background: #f0f0f0; border: 1px solid #ccc; width: 28px; height: 28px; font-weight: bold; cursor: pointer; border-radius: 4px; }
   `;
   document.head.appendChild(style);
 }
 
-// 2. Navigation Header Fix (Strict Single Instance)
+// 2. Navigation Header Setup
 function setupResponsiveHeader() {
-  // Purane duplicate headers completely remove karo
   const existingHeaders = document.querySelectorAll('header, .app-header');
   if (existingHeaders.length > 0) {
     existingHeaders.forEach((el, index) => {
@@ -222,14 +221,34 @@ function updateNavState() {
 
 function updateCartBadge() {
   const badge = document.getElementById('cart-count');
-  if (badge) badge.innerText = window.cart.length;
+  if (badge) {
+    const totalCount = window.cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    badge.innerText = totalCount;
+  }
 }
 
+// Cart System with Quantity Handlers
 window.addToCart = (id, title, price, image) => {
-  window.cart.push({ id, title, price, image });
+  const existingItem = window.cart.find(item => item.id === id);
+  if (existingItem) {
+    existingItem.quantity = (existingItem.quantity || 1) + 1;
+  } else {
+    window.cart.push({ id, title, price, image, quantity: 1 });
+  }
   localStorage.setItem('arcanix_cart', JSON.stringify(window.cart));
   updateCartBadge();
   alert(`"${title}" added to Cart!`);
+};
+
+window.changeCartQty = (index, delta) => {
+  if (window.cart[index]) {
+    window.cart[index].quantity = (window.cart[index].quantity || 1) + delta;
+    if (window.cart[index].quantity <= 0) {
+      window.cart.splice(index, 1);
+    }
+    localStorage.setItem('arcanix_cart', JSON.stringify(window.cart));
+    renderCartPage();
+  }
 };
 
 window.removeFromCart = (index) => {
@@ -444,7 +463,7 @@ function renderCartPage() {
     appContainer.innerHTML = `<div style="text-align: center; padding: 50px 16px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);"><h2>Your Shopping Cart is Empty!</h2><br/><a href="#home" style="display:inline-block; padding:12px 28px; background:#2874f0; color:#fff; text-decoration:none; border-radius:2px; font-weight:700; font-size:0.9rem;">Shop Now</a></div>`;
     return;
   }
-  let total = window.cart.reduce((sum, item) => sum + item.price, 0);
+  let total = window.cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
 
   appContainer.innerHTML = `
     <div style="display: flex; flex-wrap: wrap; gap: 16px;">
@@ -456,16 +475,21 @@ function renderCartPage() {
             <div style="flex: 1;">
               <h4 style="font-size: 0.88rem; font-weight:500; margin-bottom: 6px; color:#212121;">${item.title}</h4>
               <div><span style="font-weight:700; font-size: 1rem; color:#212121;">$${item.price}</span></div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                <button class="qty-btn" onclick="changeCartQty(${idx}, -1)">-</button>
+                <span style="font-weight:600; font-size:0.9rem;">${item.quantity || 1}</span>
+                <button class="qty-btn" onclick="changeCartQty(${idx}, 1)">+</button>
+              </div>
             </div>
-            <button onclick="removeFromCart(${idx})" style="background:none; border:none; color: #2874f0; font-size: 0.85rem; font-weight:700; cursor:pointer;">REMOVE</button>
+            <button onclick="removeFromCart(${idx})" style="background:none; border:none; color: #d32f2f; font-size: 0.85rem; font-weight:700; cursor:pointer;">REMOVE</button>
           </div>
         `).join('')}
       </div>
       <div style="flex: 1 1 250px; background:#fff; padding: 16px; border-radius:4px; height: fit-content; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
         <h4 style="color: #878787; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 14px; font-size: 0.85rem; font-weight:700;">PRICE DETAILS</h4>
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.88rem;">
-          <span>Price (${window.cart.length} items)</span>
-          <span>$${total.toFixed(2)}</span>
+          <span>Total Items</span>
+          <span>${window.cart.reduce((s, i) => s + (i.quantity || 1), 0)}</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.88rem; color:#388e3c;">
           <span>Delivery Charges</span>
@@ -483,7 +507,7 @@ function renderCartPage() {
 
 // 8. CHECKOUT PAGE
 function renderCheckoutPage() {
-  let total = window.cart.reduce((sum, item) => sum + item.price, 0);
+  let total = window.cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
   appContainer.innerHTML = `
     <div style="padding: 24px; background:#fff; max-width: 550px; margin: 0 auto; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
       <h2 style="margin-bottom: 18px; font-size: 1.15rem; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">Order Summary ($${total.toFixed(2)})</h2>
@@ -571,7 +595,7 @@ function renderUserDashboardPage() {
   document.getElementById('so-btn').onclick = () => signOut(auth).then(() => location.hash = 'auth');
 }
 
-// 12. ADMIN DASHBOARD
+// 12. ADMIN DASHBOARD (With Edit & Add Support)
 async function renderSellerDashboardPage() {
   if (!currentUser || (currentUser.email && currentUser.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase())) {
     appContainer.innerHTML = `<div style="padding:20px; background:#fff;"><h2>Access Denied</h2><p>Only authorized admin can access this page.</p></div>`;
@@ -601,7 +625,7 @@ async function renderSellerDashboardPage() {
       </div>
 
       <form id="seller-add-form" style="background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 24px;">
-        <h4 style="margin-bottom: 12px; font-size:0.95rem;">3. Publish New Product</h4>
+        <h4 style="margin-bottom: 12px; font-size:0.95rem;" id="prod-form-heading">3. Publish New Product</h4>
         <div style="display: flex; flex-wrap: wrap; gap: 12px;">
           <div style="flex: 1 1 180px; margin-bottom:8px;"><label style="font-size:0.8rem;">Title</label><input type="text" id="p-title" required placeholder="Headphones" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <div style="flex: 1 1 180px; margin-bottom:8px;">
@@ -615,7 +639,10 @@ async function renderSellerDashboardPage() {
           <div style="flex: 1 1 100%; margin-bottom:8px;"><label style="font-size:0.8rem;">Image URL</label><input type="url" id="p-image" required placeholder="https://..." style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <div style="flex: 1 1 100%; margin-bottom:12px;"><label style="font-size:0.8rem;">Description</label><textarea id="p-desc" rows="2" required placeholder="Product specifications..." style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"></textarea></div>
         </div>
-        <button type="submit" style="width:100%; padding:10px; background:#fb641b; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer;">PUBLISH PRODUCT NOW</button>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" id="prod-submit-btn" style="flex:1; padding:10px; background:#fb641b; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer;">PUBLISH PRODUCT NOW</button>
+          <button type="button" id="cancel-edit-btn" style="display:none; padding:10px; background:#666; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer;" onclick="resetProductForm()">CANCEL EDIT</button>
+        </div>
       </form>
 
       <h4 style="margin-bottom: 12px; margin-top: 24px; font-size:0.95rem;">Manage Live Hero Banners</h4>
@@ -647,6 +674,38 @@ async function renderSellerDashboardPage() {
   }
 
   await populateCategoryDropdown();
+
+  window.startEditProduct = async (id) => {
+    try {
+      const snap = await getDoc(doc(db, "products", id));
+      if (!snap.exists()) return;
+      const data = snap.data();
+      
+      editingProductId = id;
+      document.getElementById('prod-form-heading').innerText = "3. Edit Product Details";
+      document.getElementById('prod-submit-btn').innerText = "UPDATE PRODUCT";
+      document.getElementById('cancel-edit-btn').style.display = "block";
+
+      document.getElementById('p-title').value = data.title || '';
+      document.getElementById('p-category').value = data.category || 'General';
+      document.getElementById('p-price').value = data.price || 0;
+      document.getElementById('p-tag').value = data.tag || '';
+      document.getElementById('p-image').value = data.imageUrl || '';
+      document.getElementById('p-desc').value = data.description || '';
+
+      window.scrollTo({ top: document.getElementById('seller-add-form').offsetTop - 20, behavior: 'smooth' });
+    } catch (err) {
+      alert("Error loading product for edit: " + err.message);
+    }
+  };
+
+  window.resetProductForm = () => {
+    editingProductId = null;
+    document.getElementById('seller-add-form').reset();
+    document.getElementById('prod-form-heading').innerText = "3. Publish New Product";
+    document.getElementById('prod-submit-btn').innerText = "PUBLISH PRODUCT NOW";
+    document.getElementById('cancel-edit-btn').style.display = "none";
+  };
 
   document.getElementById('admin-cat-form').onsubmit = async (e) => {
     e.preventDefault();
@@ -696,21 +755,29 @@ async function renderSellerDashboardPage() {
 
   document.getElementById('seller-add-form').onsubmit = async (e) => {
     e.preventDefault();
+    const productPayload = {
+      title: document.getElementById('p-title').value,
+      category: document.getElementById('p-category').value,
+      price: parseFloat(document.getElementById('p-price').value),
+      tag: document.getElementById('p-tag').value || '',
+      imageUrl: document.getElementById('p-image').value,
+      description: document.getElementById('p-desc').value,
+      updatedAt: new Date()
+    };
+
     try {
-      await addDoc(collection(db, "products"), {
-        title: document.getElementById('p-title').value,
-        category: document.getElementById('p-category').value,
-        price: parseFloat(document.getElementById('p-price').value),
-        tag: document.getElementById('p-tag').value || '',
-        imageUrl: document.getElementById('p-image').value,
-        description: document.getElementById('p-desc').value,
-        createdAt: new Date()
-      });
-      alert("Product published!");
-      document.getElementById('seller-add-form').reset();
+      if (editingProductId) {
+        await updateDoc(doc(db, "products", editingProductId), productPayload);
+        alert("Product updated successfully!");
+      } else {
+        productPayload.createdAt = new Date();
+        await addDoc(collection(db, "products"), productPayload);
+        alert("Product published!");
+      }
+      resetProductForm();
       renderSellerDashboardPage();
     } catch(err) {
-      alert("Error adding product: " + err.message);
+      alert("Error saving product: " + err.message);
     }
   };
 
@@ -762,7 +829,10 @@ async function renderSellerDashboardPage() {
                 <td style="padding:6px;"><img src="${data.imageUrl}" style="width: 36px; height: 36px; object-fit: contain;"/></td>
                 <td style="padding:6px;"><b>${data.title}</b></td>
                 <td style="padding:6px;">$${data.price}</td>
-                <td style="padding:6px;"><button onclick="deleteItemByAdmin('products', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer;">Delete</button></td>
+                <td style="padding:6px;">
+                  <button onclick="startEditProduct('${docSnap.id}')" style="background:#2874f0; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer; margin-right:4px;">Edit</button>
+                  <button onclick="deleteItemByAdmin('products', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer;">Delete</button>
+                </td>
               </tr>
             `;
           }).join('')}
