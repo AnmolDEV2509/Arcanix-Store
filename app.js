@@ -1,9 +1,8 @@
 import { db, auth, onAuthStateChanged, googleProvider, signInWithPopup, signOut, signInWithEmailAndPassword, ADMIN_EMAIL } from './firebase-config.js';
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 window.cart = JSON.parse(localStorage.getItem('arcanix_cart')) || [];
 let currentUser = null;
-let editingProductId = null;
 let adminUpiConfig = { upiId: 'merchant@upi', merchantName: 'ArcanixPlus' };
 
 // Standard Reusable Vector SVG Templates
@@ -15,15 +14,10 @@ const VECTOR_ICONS = {
   gear: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   star: `<svg class="v-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
   globe: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>`,
-  box: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>`,
-  party: `<svg class="v-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
-  check: `<svg class="v-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-  cross: `<svg class="v-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
-  truck: `<svg class="v-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
-  clock: `<svg class="v-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
+  party: `<svg class="v-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
 };
 
-// Fetch Admin Payment Config
+// Fetch Admin Payment Config (for customer checkout)
 async function loadAdminPaymentSettings() {
   try {
     const snap = await getDoc(doc(db, "settings", "payment"));
@@ -35,7 +29,7 @@ async function loadAdminPaymentSettings() {
       };
     }
   } catch(e) {
-    console.error("Error loading admin UPI settings:", e);
+    console.error("Error loading UPI settings:", e);
   }
 }
 loadAdminPaymentSettings();
@@ -54,13 +48,12 @@ const routes = {
   'checkout': renderCheckoutPage,
   'order-confirmation': renderOrderConfirmationPage,
   'auth': renderAuthPage,
-  'account': renderUserDashboardPage,
-  'seller-dashboard': renderSellerDashboardPage
+  'account': renderUserDashboardPage
 };
 
 const appContainer = document.getElementById('app-view');
 
-// 1. Responsive Stylesheet Injection
+// Responsive Stylesheet Injection
 function injectResponsiveStyles() {
   if (document.getElementById('responsive-custom-styles')) return;
   const style = document.createElement('style');
@@ -68,26 +61,20 @@ function injectResponsiveStyles() {
   style.innerHTML = `
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, Roboto, sans-serif; }
     body { background-color: #f1f3f6; color: #212121; min-height: 100vh; }
-
     .v-icon { vertical-align: middle; display: inline-block; }
-
     .main-container { max-width: 1240px; margin: 0 auto; padding: 12px; }
-
     .app-header { position: sticky; top: 0; z-index: 1000; background: #2874f0; color: #ffffff; box-shadow: 0 2px 4px 0 rgba(0,0,0,.1); }
     .header-top { max-width: 1240px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .header-left { display: flex; align-items: center; gap: 12px; }
     .hamburger-btn { font-size: 1.4rem; cursor: pointer; background: none; border: none; color: #fff; display: flex; align-items: center; }
     .brand-logo { font-size: 1.35rem; font-weight: 800; color: #fff; text-decoration: none; font-style: italic; letter-spacing: -0.5px; }
     .brand-logo span { color: #ffe500; font-style: normal; }
-
     .header-search-box { flex: 1; max-width: 550px; position: relative; display: flex; align-items: center; }
     .header-search-box input { width: 100%; padding: 9px 40px 9px 14px; border: none; border-radius: 4px; outline: none; font-size: 0.9rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
     .header-search-box button { position: absolute; right: 4px; background: none; border: none; cursor: pointer; font-size: 1rem; padding: 6px 10px; color: #2874f0; display: flex; align-items: center; }
-
     .header-right { display: flex; align-items: center; gap: 20px; }
     .header-link { color: #fff; text-decoration: none; font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
     .badge-count { background: #ffe500; color: #000; font-weight: 800; font-size: 0.75rem; padding: 1px 6px; border-radius: 10px; }
-
     .mobile-search-strip { display: none; background: #2874f0; padding: 0 12px 10px 12px; }
 
     @media (max-width: 767px) {
@@ -119,23 +106,15 @@ function injectResponsiveStyles() {
     .drawer-overlay.active { display: block; }
     .drawer-header { background: #2874f0; color: #fff; padding: 16px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
     .drawer-links a { padding: 14px 16px; color: #333; text-decoration: none; font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #f0f0f0; }
-    
     .qty-btn { background: #f0f0f0; border: 1px solid #ccc; width: 28px; height: 28px; font-weight: bold; cursor: pointer; border-radius: 4px; }
     
-    .status-badge { padding: 4px 8px; border-radius: 3px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; }
-    .status-Pending { background: #fff3cd; color: #856404; }
-    .status-Processing { background: #cce5ff; color: #004085; }
-    .status-Shipped { background: #e2e3e5; color: #383d41; }
-    .status-Delivered { background: #d4edda; color: #155724; }
-    .status-Cancelled { background: #f8d7da; color: #721c24; }
-
     .payment-option { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; }
     .payment-option.active { border-color: #2874f0; background: #f0f7ff; }
   `;
   document.head.appendChild(style);
 }
 
-// 2. Navigation Header Setup
+// Navigation Header Setup
 function setupResponsiveHeader() {
   const existingHeaders = document.querySelectorAll('header, .app-header');
   if (existingHeaders.length > 0) {
@@ -273,7 +252,7 @@ function updateNavState() {
       <a href="#home" onclick="toggleDrawer(false)"><span>${VECTOR_ICONS.home}</span> Home</a>
       <a href="#cart" onclick="toggleDrawer(false)"><span>${VECTOR_ICONS.cart}</span> My Cart</a>
       <a href="#account" onclick="toggleDrawer(false)"><span>${VECTOR_ICONS.user}</span> My Account</a>
-      ${isAdmin ? `<a href="#seller-dashboard" onclick="toggleDrawer(false)" style="color:#2874f0; font-weight:700;"><span>${VECTOR_ICONS.gear}</span> CMS Admin Dashboard</a>` : ''}
+      ${isAdmin ? `<a href="admin.html" onclick="toggleDrawer(false)" style="color:#2874f0; font-weight:700;"><span>${VECTOR_ICONS.gear}</span> Open Admin Panel</a>` : ''}
     `;
   }
 }
@@ -318,33 +297,7 @@ window.removeFromCart = (index) => {
   updateCartBadge();
 };
 
-window.deleteItemByAdmin = async (colName, id) => {
-  if (confirm(`Delete this item from ${colName}?`)) {
-    try {
-      await deleteDoc(doc(db, colName, id));
-      alert("Deleted successfully!");
-      renderSellerDashboardPage();
-    } catch(err) {
-      alert("Error deleting: " + err.message);
-    }
-  }
-};
-
-// Update Order Status Handler for Admin
-window.updateOrderStatus = async (orderId, newStatus) => {
-  try {
-    await updateDoc(doc(db, "orders", orderId), {
-      status: newStatus,
-      updatedAt: new Date()
-    });
-    alert(`Order status updated to "${newStatus}"!`);
-    renderSellerDashboardPage();
-  } catch(err) {
-    alert("Error updating order status: " + err.message);
-  }
-};
-
-// 3. HOME PAGE
+// HOME PAGE
 async function renderHomePage() {
   appContainer.innerHTML = `
     <div id="home-slider-container" style="margin-bottom: 12px;"></div>
@@ -468,7 +421,7 @@ window.handleHomeCategoryChange = function(selectedCat) {
   fetchProductsGrid(document.getElementById('home-products-grid'), '', selectedCat);
 };
 
-// 4. CATEGORY PRODUCTS PAGE
+// CATEGORY PRODUCTS PAGE
 async function renderCategoryProductsPage(params) {
   const categoryName = params.get('category') || '';
   appContainer.innerHTML = `
@@ -480,7 +433,7 @@ async function renderCategoryProductsPage(params) {
   fetchProductsGrid(document.getElementById('plp-grid'), '', categoryName);
 }
 
-// 5. PRODUCT DETAIL PAGE
+// PRODUCT DETAIL PAGE
 async function renderProductDetailPage(params) {
   const id = params.get('id');
   if (!id) return;
@@ -520,7 +473,7 @@ async function renderProductDetailPage(params) {
   }
 }
 
-// 6. SEARCH PAGE
+// SEARCH PAGE
 function renderSearchResultsPage(params) {
   const query = params.get('q') || '';
   appContainer.innerHTML = `
@@ -532,7 +485,7 @@ function renderSearchResultsPage(params) {
   fetchProductsGrid(document.getElementById('search-grid'), query);
 }
 
-// 7. CART PAGE
+// CART PAGE
 function renderCartPage() {
   if (window.cart.length === 0) {
     appContainer.innerHTML = `<div style="text-align: center; padding: 50px 16px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);"><h2>Your Shopping Cart is Empty!</h2><br/><a href="#home" style="display:inline-block; padding:12px 28px; background:#2874f0; color:#fff; text-decoration:none; border-radius:2px; font-weight:700; font-size:0.9rem;">Shop Now</a></div>`;
@@ -588,7 +541,7 @@ function getDynamicUpiQrUrl(total) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(upiPayload)}`;
 }
 
-// 8. CHECKOUT PAGE (With Payment Options & Dynamic Interactive Admin QR UI)
+// CHECKOUT PAGE
 async function renderCheckoutPage() {
   if (window.cart.length === 0) {
     location.hash = 'cart';
@@ -724,7 +677,7 @@ async function renderCheckoutPage() {
   };
 }
 
-// 9. ORDER CONFIRMATION PAGE
+// ORDER CONFIRMATION PAGE
 function renderOrderConfirmationPage() {
   appContainer.innerHTML = `
     <div style="text-align: center; padding: 50px 16px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
@@ -737,7 +690,7 @@ function renderOrderConfirmationPage() {
   `;
 }
 
-// 10. AUTH PAGE
+// AUTH PAGE
 function renderAuthPage() {
   appContainer.innerHTML = `
     <div style="padding: 24px; background:#fff; max-width: 400px; margin: 20px auto; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.12);">
@@ -774,7 +727,7 @@ function renderAuthPage() {
   };
 }
 
-// 11. USER DASHBOARD
+// USER DASHBOARD (PROFILE PAGE)
 function renderUserDashboardPage() {
   if (!currentUser) { location.hash = 'auth'; return; }
   const isAdmin = currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
@@ -783,415 +736,18 @@ function renderUserDashboardPage() {
     <div style="padding: 24px; background:#fff; text-align: center; max-width: 450px; margin: 0 auto; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
       <h3 style="font-size: 1.15rem;">My Account</h3>
       <p style="color: #666; margin: 6px 0 20px 0; font-size: 0.88rem;">${currentUser.email}</p>
+      
       <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 20px;">
-        ${isAdmin ? `<a href="#seller-dashboard" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:11px; background:#2874f0; color:#fff; text-decoration:none; font-weight:700; border-radius:2px; font-size:0.9rem;"><span>${VECTOR_ICONS.gear}</span> Admin Control Panel (CMS)</a>` : ''}
+        ${isAdmin ? `<a href="admin.html" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:11px; background:#2874f0; color:#fff; text-decoration:none; font-weight:700; border-radius:2px; font-size:0.9rem;"><span>${VECTOR_ICONS.gear}</span> Open Admin Panel</a>` : ''}
       </div>
+      
       <button id="so-btn" style="width:100%; padding:11px; background:none; border:1px solid #ccc; border-radius:2px; cursor:pointer; font-weight:600; color:#d32f2f; font-size:0.9rem;">Logout Account</button>
     </div>
   `;
   document.getElementById('so-btn').onclick = () => signOut(auth).then(() => location.hash = 'auth');
 }
 
-// 12. ADMIN DASHBOARD
-async function renderSellerDashboardPage() {
-  if (!currentUser || (currentUser.email && currentUser.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase())) {
-    appContainer.innerHTML = `<div style="padding:20px; background:#fff;"><h2>Access Denied</h2><p>Only authorized admin can access this page.</p></div>`;
-    return;
-  }
-
-  await loadAdminPaymentSettings();
-
-  appContainer.innerHTML = `
-    <div style="padding: 20px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-      <h2 style="font-size: 1.15rem; margin-bottom: 4px; display:flex; align-items:center; gap:8px;">
-        <span>${VECTOR_ICONS.gear}</span> Admin Control Panel (E-Commerce CMS)
-      </h2>
-      <p style="color: #666; margin-bottom: 20px; font-size: 0.85rem;">Manage Payment QR, Banners, Categories, Live Products & Customer Orders.</p>
-
-      <!-- ADMIN QR & PAYMENT SETTINGS SECTION -->
-      <form id="admin-payment-form" style="background: #eef5ff; border: 1px dashed #2874f0; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
-        <h4 style="margin-bottom: 12px; font-size:0.95rem; color:#2874f0;">Payment QR & UPI Settings</h4>
-        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-          <div style="flex: 1 1 220px; margin-bottom:8px;">
-            <label style="font-size:0.8rem; font-weight:600;">Admin UPI ID (e.g. name@upi)</label>
-            <input type="text" id="qr-upi-id" required value="${adminUpiConfig.upiId}" placeholder="yourname@upi" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:3px; font-size:0.85rem;"/>
-          </div>
-          <div style="flex: 1 1 220px; margin-bottom:8px;">
-            <label style="font-size:0.8rem; font-weight:600;">Business / Merchant Name</label>
-            <input type="text" id="qr-merchant-name" required value="${adminUpiConfig.merchantName}" placeholder="Arcanix Store" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:3px; font-size:0.85rem;"/>
-          </div>
-        </div>
-        <button type="submit" id="qr-save-btn" style="padding:8px 16px; background:#2874f0; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer; font-size:0.85rem;">Save UPI QR Settings</button>
-      </form>
-
-      <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
-        <form id="admin-banner-form" style="flex: 1 1 280px; background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px;">
-          <h4 style="margin-bottom: 12px; font-size:0.95rem;">1. Add Hero Banner</h4>
-          <div style="margin-bottom:8px;"><label style="font-size:0.8rem;">Title</label><input type="text" id="b-title" required placeholder="FESTIVE SALE" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <div style="margin-bottom:8px;"><label style="font-size:0.8rem;">Subtitle</label><input type="text" id="b-subtitle" placeholder="Up to 80% OFF" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <div style="margin-bottom:12px;"><label style="font-size:0.8rem;">Image URL</label><input type="url" id="b-image" required placeholder="https://..." style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <button type="submit" style="width:100%; padding:8px; background:#fb641b; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer;">Save Banner</button>
-        </form>
-
-        <form id="admin-cat-form" style="flex: 1 1 280px; background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px;">
-          <h4 style="margin-bottom: 12px; font-size:0.95rem;">2. Add New Category</h4>
-          <div style="margin-bottom:8px;"><label style="font-size:0.8rem;">Category Name</label><input type="text" id="c-name" required placeholder="Electronics" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <div style="margin-bottom:12px;"><label style="font-size:0.8rem;">Category Tag</label><input type="text" id="c-icon" placeholder="Featured" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <button type="submit" id="c-submit-btn" style="width:100%; padding:8px; background:#2874f0; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer;">Save Category</button>
-        </form>
-      </div>
-
-      <form id="seller-add-form" style="background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 24px;">
-        <h4 style="margin-bottom: 12px; font-size:0.95rem;" id="prod-form-heading">3. Publish New Product</h4>
-        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-          <div style="flex: 1 1 180px; margin-bottom:8px;"><label style="font-size:0.8rem;">Title</label><input type="text" id="p-title" required placeholder="Headphones" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <div style="flex: 1 1 180px; margin-bottom:8px;">
-            <label style="font-size:0.8rem;">Select Category</label>
-            <select id="p-category" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius:2px; background:#fff; font-size:0.85rem;">
-              <option value="General">General</option>
-            </select>
-          </div>
-          <div style="flex: 1 1 180px; margin-bottom:8px;"><label style="font-size:0.8rem;">Price (₹)</label><input type="number" step="0.01" id="p-price" required placeholder="499" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <div style="flex: 1 1 180px; margin-bottom:8px;"><label style="font-size:0.8rem;">Offer Tag</label><input type="text" id="p-tag" placeholder="Hot Deal" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <div style="flex: 1 1 100%; margin-bottom:8px;"><label style="font-size:0.8rem;">Image URL</label><input type="url" id="p-image" required placeholder="https://..." style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <div style="flex: 1 1 100%; margin-bottom:12px;"><label style="font-size:0.8rem;">Description</label><textarea id="p-desc" rows="2" required placeholder="Product specifications..." style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"></textarea></div>
-        </div>
-        <div style="display:flex; gap:10px;">
-          <button type="submit" id="prod-submit-btn" style="flex:1; padding:10px; background:#fb641b; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer;">PUBLISH PRODUCT NOW</button>
-          <button type="button" id="cancel-edit-btn" style="display:none; padding:10px; background:#666; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer;" onclick="resetProductForm()">CANCEL EDIT</button>
-        </div>
-      </form>
-
-      <!-- ORDER MANAGEMENT MODULE -->
-      <h4 style="margin-bottom: 12px; margin-top: 28px; font-size:1.05rem; color:#2874f0; display:flex; align-items:center; gap:6px;">
-        <span>${VECTOR_ICONS.box}</span> Customer Order Management
-      </h4>
-      <div id="admin-orders-list" style="overflow-x: auto; margin-bottom: 30px;"></div>
-
-      <h4 style="margin-bottom: 12px; font-size:0.95rem;">Manage Categories</h4>
-      <div id="admin-categories-list" style="overflow-x: auto; margin-bottom: 24px;"></div>
-
-      <h4 style="margin-bottom: 12px; font-size:0.95rem;">Manage Live Hero Banners</h4>
-      <div id="admin-banners-list" style="overflow-x: auto; margin-bottom: 24px;"></div>
-
-      <h4 style="margin-bottom: 12px; font-size:0.95rem;">Manage Live Products</h4>
-      <div id="admin-items-list" style="overflow-x: auto;"></div>
-    </div>
-  `;
-
-  // Submit Admin Payment Settings Form
-  document.getElementById('admin-payment-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('qr-save-btn');
-    const newUpiId = document.getElementById('qr-upi-id').value.trim();
-    const newMerchantName = document.getElementById('qr-merchant-name').value.trim();
-
-    try {
-      btn.disabled = true;
-      btn.innerText = "Saving Settings...";
-      await setDoc(doc(db, "settings", "payment"), {
-        upiId: newUpiId,
-        merchantName: newMerchantName,
-        updatedAt: new Date()
-      });
-      adminUpiConfig = { upiId: newUpiId, merchantName: newMerchantName };
-      alert("Payment UPI QR Settings saved successfully!");
-    } catch(err) {
-      alert("Error saving payment settings: " + err.message);
-    } finally {
-      btn.disabled = false;
-      btn.innerText = "Save UPI QR Settings";
-    }
-  };
-
-  async function populateCategoryDropdown() {
-    const catSelect = document.getElementById('p-category');
-    if (!catSelect) return;
-    try {
-      const catSnap = await getDocs(collection(db, "categories"));
-      catSelect.innerHTML = '<option value="General">General</option>';
-      if (!catSnap.empty) {
-        catSnap.docs.forEach(d => {
-          const catName = d.data().name;
-          const option = document.createElement('option');
-          option.value = catName;
-          option.textContent = catName;
-          catSelect.appendChild(option);
-        });
-      }
-    } catch (err) {
-      console.error("Categories Fetch Error:", err);
-    }
-  }
-
-  await populateCategoryDropdown();
-
-  // Render Categories Table in CMS
-  const categoriesContainer = document.getElementById('admin-categories-list');
-  try {
-    const catSnap = await getDocs(collection(db, "categories"));
-    if (catSnap.empty) {
-      categoriesContainer.innerHTML = '<p style="color:#878787; font-size:0.85rem;">No custom categories created yet.</p>';
-    } else {
-      categoriesContainer.innerHTML = `
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-          <thead><tr style="border-bottom: 2px solid #e0e0e0; text-align:left;"><th style="padding:8px;">Icon</th><th style="padding:8px;">Category Name</th><th style="padding:8px;">Action</th></tr></thead>
-          <tbody>
-            ${catSnap.docs.map(docSnap => {
-              const c = docSnap.data();
-              return `
-                <tr style="border-bottom: 1px solid #eee;">
-                  <td style="padding:6px;">${VECTOR_ICONS.box}</td>
-                  <td style="padding:6px;"><b>${c.name}</b></td>
-                  <td style="padding:6px;"><button onclick="deleteItemByAdmin('categories', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer;">Delete</button></td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      `;
-    }
-  } catch(err) {
-    categoriesContainer.innerHTML = '<p style="color:#d32f2f;">Error fetching categories.</p>';
-  }
-
-  // Load Customer Orders
-  const ordersContainer = document.getElementById('admin-orders-list');
-  try {
-    const ordersSnap = await getDocs(collection(db, "orders"));
-    if (ordersSnap.empty) {
-      ordersContainer.innerHTML = '<p style="color:#878787; font-size:0.85rem; padding:10px; background:#f9f9f9; border-radius:4px;">No customer orders placed yet.</p>';
-    } else {
-      const getStatusBadgeIcon = (status) => {
-        if (status === 'Delivered') return VECTOR_ICONS.check;
-        if (status === 'Cancelled') return VECTOR_ICONS.cross;
-        if (status === 'Shipped') return VECTOR_ICONS.truck;
-        return VECTOR_ICONS.clock;
-      };
-
-      ordersContainer.innerHTML = `
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-          <thead>
-            <tr style="background:#f1f3f6; text-align:left;">
-              <th style="padding:10px; border-bottom:2px solid #ddd;">Order Details</th>
-              <th style="padding:10px; border-bottom:2px solid #ddd;">Customer Info</th>
-              <th style="padding:10px; border-bottom:2px solid #ddd;">Total</th>
-              <th style="padding:10px; border-bottom:2px solid #ddd;">Status</th>
-              <th style="padding:10px; border-bottom:2px solid #ddd;">Update Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${ordersSnap.docs.map(docSnap => {
-              const o = docSnap.data();
-              const itemsStr = (o.items || []).map(i => `${i.title} (x${i.quantity || 1})`).join('<br/>');
-              const currentStatus = o.status || 'Pending';
-
-              return `
-                <tr style="border-bottom: 1px solid #eee;">
-                  <td style="padding:10px; vertical-align:top;">
-                    <div style="font-weight:700; color:#2874f0; margin-bottom:4px;">#${docSnap.id.substring(0, 8).toUpperCase()}</div>
-                    <div style="font-size:0.8rem; color:#555;">${itemsStr}</div>
-                  </td>
-                  <td style="padding:10px; vertical-align:top;">
-                    <b>${o.customerName || 'N/A'}</b><br/>
-                    <span style="font-size:0.78rem; color:#666;">${o.customerEmail || ''}</span><br/>
-                    <span style="font-size:0.78rem; color:#444;">${o.address || 'No Address'}</span>
-                  </td>
-                  <td style="padding:10px; vertical-align:top;">
-                    <b>₹${(o.totalAmount || 0).toFixed(2)}</b><br/>
-                    <span style="font-size:0.75rem; color:#666;">${o.paymentMode || ''}</span>
-                  </td>
-                  <td style="padding:10px; vertical-align:top;">
-                    <span class="status-badge status-${currentStatus}">${getStatusBadgeIcon(currentStatus)} ${currentStatus}</span>
-                  </td>
-                  <td style="padding:10px; vertical-align:top;">
-                    <select onchange="updateOrderStatus('${docSnap.id}', this.value)" style="padding:5px; border-radius:3px; border:1px solid #ccc; font-size:0.8rem; outline:none; cursor:pointer;">
-                      <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending</option>
-                      <option value="Processing" ${currentStatus === 'Processing' ? 'selected' : ''}>Processing</option>
-                      <option value="Shipped" ${currentStatus === 'Shipped' ? 'selected' : ''}>Shipped</option>
-                      <option value="Delivered" ${currentStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
-                      <option value="Cancelled" ${currentStatus === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
-                    </select>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      `;
-    }
-  } catch(err) {
-    ordersContainer.innerHTML = '<p style="color:#d32f2f;">Error fetching orders.</p>';
-  }
-
-  window.startEditProduct = async (id) => {
-    try {
-      const snap = await getDoc(doc(db, "products", id));
-      if (!snap.exists()) return;
-      const data = snap.data();
-      
-      editingProductId = id;
-      document.getElementById('prod-form-heading').innerText = "3. Edit Product Details";
-      document.getElementById('prod-submit-btn').innerText = "UPDATE PRODUCT";
-      document.getElementById('cancel-edit-btn').style.display = "block";
-
-      document.getElementById('p-title').value = data.title || '';
-      document.getElementById('p-category').value = data.category || 'General';
-      document.getElementById('p-price').value = data.price || 0;
-      document.getElementById('p-tag').value = data.tag || '';
-      document.getElementById('p-image').value = data.imageUrl || '';
-      document.getElementById('p-desc').value = data.description || '';
-
-      window.scrollTo({ top: document.getElementById('seller-add-form').offsetTop - 20, behavior: 'smooth' });
-    } catch (err) {
-      alert("Error loading product for edit: " + err.message);
-    }
-  };
-
-  window.resetProductForm = () => {
-    editingProductId = null;
-    document.getElementById('seller-add-form').reset();
-    document.getElementById('prod-form-heading').innerText = "3. Publish New Product";
-    document.getElementById('prod-submit-btn').innerText = "PUBLISH PRODUCT NOW";
-    document.getElementById('cancel-edit-btn').style.display = "none";
-  };
-
-  document.getElementById('admin-cat-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const submitBtn = document.getElementById('c-submit-btn');
-    const catName = document.getElementById('c-name').value.trim();
-
-    if (!catName) return;
-
-    try {
-      submitBtn.disabled = true;
-      submitBtn.innerText = "Saving...";
-
-      await addDoc(collection(db, "categories"), {
-        name: catName,
-        createdAt: new Date()
-      });
-
-      alert(`Category "${catName}" added!`);
-      document.getElementById('admin-cat-form').reset();
-      renderSellerDashboardPage();
-    } catch (err) {
-      alert("Error adding category: " + err.message);
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerText = "Save Category";
-    }
-  };
-
-  document.getElementById('admin-banner-form').onsubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await addDoc(collection(db, "banners"), {
-        title: document.getElementById('b-title').value,
-        subtitle: document.getElementById('b-subtitle').value,
-        imageUrl: document.getElementById('b-image').value,
-        createdAt: new Date()
-      });
-      alert("Banner saved!");
-      document.getElementById('admin-banner-form').reset();
-      renderSellerDashboardPage();
-    } catch(err) {
-      alert("Error adding banner: " + err.message);
-    }
-  };
-
-  document.getElementById('seller-add-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const productPayload = {
-      title: document.getElementById('p-title').value,
-      category: document.getElementById('p-category').value,
-      price: parseFloat(document.getElementById('p-price').value),
-      tag: document.getElementById('p-tag').value || '',
-      imageUrl: document.getElementById('p-image').value,
-      description: document.getElementById('p-desc').value,
-      updatedAt: new Date()
-    };
-
-    try {
-      if (editingProductId) {
-        await updateDoc(doc(db, "products", editingProductId), productPayload);
-        alert("Product updated successfully!");
-      } else {
-        productPayload.createdAt = new Date();
-        await addDoc(collection(db, "products"), productPayload);
-        alert("Product published!");
-      }
-      resetProductForm();
-      renderSellerDashboardPage();
-    } catch(err) {
-      alert("Error saving product: " + err.message);
-    }
-  };
-
-  const bannersContainer = document.getElementById('admin-banners-list');
-  try {
-    const bannerSnap = await getDocs(collection(db, "banners"));
-    if (bannerSnap.empty) {
-      bannersContainer.innerHTML = '<p style="color:#878787; font-size:0.85rem;">No banners active.</p>';
-    } else {
-      bannersContainer.innerHTML = `
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-          <thead><tr style="border-bottom: 2px solid #e0e0e0; text-align:left;"><th style="padding:8px;">Preview</th><th style="padding:8px;">Title</th><th style="padding:8px;">Subtitle</th><th style="padding:8px;">Action</th></tr></thead>
-          <tbody>
-            ${bannerSnap.docs.map(docSnap => {
-              const b = docSnap.data();
-              return `
-                <tr style="border-bottom: 1px solid #eee;">
-                  <td style="padding:6px;"><img src="${b.imageUrl}" style="width: 70px; height: 40px; object-fit: cover; border-radius: 3px;"/></td>
-                  <td style="padding:6px;"><b>${b.title || 'N/A'}</b></td>
-                  <td style="padding:6px;">${b.subtitle || '-'}</td>
-                  <td style="padding:6px;"><button onclick="deleteItemByAdmin('banners', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer;">Delete</button></td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      `;
-    }
-  } catch(err) {
-    bannersContainer.innerHTML = '<p>Error loading banners list.</p>';
-  }
-
-  const itemsContainer = document.getElementById('admin-items-list');
-  try {
-    const prodSnap = await getDocs(collection(db, "products"));
-    if (prodSnap.empty) {
-      itemsContainer.innerHTML = '<p style="color:#878787; font-size:0.85rem;">No live products found.</p>';
-      return;
-    }
-
-    itemsContainer.innerHTML = `
-      <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-        <thead><tr style="border-bottom: 2px solid #e0e0e0; text-align:left;"><th style="padding:8px;">Item</th><th style="padding:8px;">Title</th><th style="padding:8px;">Price</th><th style="padding:8px;">Action</th></tr></thead>
-        <tbody>
-          ${prodSnap.docs.map(docSnap => {
-            const data = docSnap.data();
-            return `
-              <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding:6px;"><img src="${data.imageUrl}" style="width: 36px; height: 36px; object-fit: contain;"/></td>
-                <td style="padding:6px;"><b>${data.title}</b></td>
-                <td style="padding:6px;">₹${data.price}</td>
-                <td style="padding:6px;">
-                  <button onclick="startEditProduct('${docSnap.id}')" style="background:#2874f0; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer; margin-right:4px;">Edit</button>
-                  <button onclick="deleteItemByAdmin('products', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer;">Delete</button>
-                </td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
-    `;
-  } catch (err) {
-    itemsContainer.innerHTML = '<p>Error loading items list.</p>';
-  }
-}
-
-// 13. DATA FETCHING GRID
+// DATA FETCHING GRID
 async function fetchProductsGrid(container, searchQuery = '', categoryFilter = '') {
   try {
     const snap = await getDocs(collection(db, "products"));
