@@ -262,28 +262,70 @@ window.updateOrderStatus = async (orderId, newStatus) => {
   } catch(err) { alert("Error updating status: " + err.message); }
 };
 
-// ==========================================
-// WHATSAPP SEND NOTICE FUNCTION (ADDED HERE)
-// ==========================================
-window.sendWhatsAppNotice = (phone, name, orderId, total, itemsText) => {
-  if (!phone || phone === 'N/A' || phone === 'undefined') {
-    alert("Customer phone number not available! (Customer ne form me number nahi daala hoga)");
-    return;
+// ====================================================
+// WHATSAPP FULL DETAILED RECEIPT GENERATOR FUNCTION
+// ====================================================
+window.sendWhatsAppNotice = (encodedOrderData) => {
+  try {
+    const orderData = JSON.parse(decodeURIComponent(encodedOrderData));
+
+    const phone = orderData.customerPhone;
+    if (!phone || phone === 'N/A' || phone === 'undefined') {
+      alert("Customer phone number not available! (Customer ne check out me number enter nahi kiya hai)");
+      return;
+    }
+
+    let formattedPhone = phone.toString().replace(/\D/g, '');
+    if (formattedPhone.length === 10) formattedPhone = '91' + formattedPhone;
+
+    // Detailed item-by-item breakdown with quantity & price calculations
+    const itemsFormatted = (orderData.items || []).map((item, idx) => {
+      const qty = item.quantity || 1;
+      const price = item.price || 0;
+      const itemTotal = price * qty;
+      return `  ${idx + 1}. *${item.title}*\n     └ Qty: ${qty} x ₹${price} = ₹${itemTotal.toFixed(2)}`;
+    }).join('\n');
+
+    const formattedDate = orderData.createdAt 
+      ? new Date(orderData.createdAt).toLocaleString('en-IN') 
+      : new Date().toLocaleString('en-IN');
+
+    const statusBadge = orderData.status === 'Accepted' ? '✅ ACCEPTED & CONFIRMED' : `⏳ ${orderData.status || 'Pending'}`;
+
+    const message = `🎉 *ORDER UPDATE - ARCANIX PLUS* 🎉
+=================================
+📌 *Order Status:* ${statusBadge}
+🆔 *Order ID:* #${orderData.id.substring(0, 8).toUpperCase()}
+📅 *Date & Time:* ${formattedDate}
+
+👤 *CUSTOMER DETAILS:*
+• *Name:* ${orderData.customerName || 'N/A'}
+• *Phone:* ${orderData.customerPhone || 'N/A'}
+• *Email:* ${orderData.customerEmail || 'N/A'}
+🏠 *Delivery Address:*
+${orderData.address || 'N/A'}
+
+=================================
+🛒 *ORDERED ITEMS (${orderData.items ? orderData.items.length : 0}):*
+${itemsFormatted}
+
+=================================
+💰 *PAYMENT & BILLING SUMMARY:*
+• *Payment Mode:* ${orderData.paymentMode || 'UPI'}
+• *Delivery Charges:* FREE
+💳 *TOTAL AMOUNT:* *₹${Number(orderData.totalAmount || 0).toFixed(2)}*
+
+=================================
+✨ *Note:* Thank you for shopping with us! Aapka order accept kar liya gaya hai aur delivery process start kar di gayi hai.
+
+📞 *Customer Support:* Direct reply to this message for assistance.`;
+
+    const encodedMsg = encodeURIComponent(message);
+    window.open(`https://wa.me/${formattedPhone}?text=${encodedMsg}`, '_blank');
+  } catch (err) {
+    console.error("WhatsApp Message Error:", err);
+    alert("WhatsApp message generate karne me issue aaya: " + err.message);
   }
-  
-  let formattedPhone = phone.toString().replace(/\D/g, '');
-  if (formattedPhone.length === 10) formattedPhone = '91' + formattedPhone; // Country code for India
-
-  const decodedName = decodeURIComponent(name);
-  const decodedItems = decodeURIComponent(itemsText);
-
-  const message = `*Hello ${decodedName}!*%0A%0A` +
-    `Aapka Order *#${orderId.substring(0, 8).toUpperCase()}* accept kar liya gaya hai! 🎉%0A%0A` +
-    `*Order Details:*%0A${decodedItems}%0A%0A` +
-    `*Total Amount:* ₹${total}%0A%0A` +
-    `Aapka order jaldi dispatch ho jayega. Thank you for shopping with us!`;
-
-  window.open(`https://wa.me/${formattedPhone}?text=${message}`, '_blank');
 };
 
 // Data Loaders
@@ -315,13 +357,24 @@ async function loadOrders() {
           ${snap.docs.map(doc => {
             const o = doc.data();
             const items = (o.items || []).map(i => `${i.title} (x${i.quantity || 1})`).join('<br/>');
-            const itemsRaw = (o.items || []).map(i => `• ${i.title} (x${i.quantity || 1})`).join('%0A');
             const status = o.status || 'Pending';
-            
-            // Extract phone properly based on what your app.js saves
             const customerPhone = o.customerPhone || o.phone || 'N/A';
-            const encodedName = encodeURIComponent(o.customerName || 'Customer');
-            const encodedItems = encodeURIComponent(itemsRaw);
+
+            // Complete Order Payload for WhatsApp Template
+            const orderPayload = {
+              id: doc.id,
+              customerName: o.customerName || 'N/A',
+              customerPhone: customerPhone,
+              customerEmail: o.customerEmail || 'N/A',
+              address: o.address || 'N/A',
+              paymentMode: o.paymentMode || 'UPI',
+              items: o.items || [],
+              totalAmount: o.totalAmount || 0,
+              status: status,
+              createdAt: o.createdAt ? (o.createdAt.seconds ? o.createdAt.seconds * 1000 : o.createdAt) : null
+            };
+
+            const encodedOrderPayload = encodeURIComponent(JSON.stringify(orderPayload));
 
             return `
               <tr>
@@ -346,7 +399,7 @@ async function loadOrders() {
                   
                   ${status === 'Accepted' ? `
                     <button class="btn btn-orange" style="width: 100%; font-size: 11px; padding: 6px 8px; cursor: pointer; border: none; border-radius: 4px; background: #25D366; color: white; font-weight: bold;" 
-                      onclick="sendWhatsAppNotice('${customerPhone}', '${encodedName}', '${doc.id}', ${(o.totalAmount || 0).toFixed(2)}, '${encodedItems}')">
+                      onclick="sendWhatsAppNotice('${encodedOrderPayload}')">
                       📲 Send WhatsApp
                     </button>
                   ` : ''}
