@@ -262,15 +262,17 @@ window.updateOrderStatus = async (orderId, newStatus) => {
   } catch(err) { alert("Error updating status: " + err.message); }
 };
 
-// WhatsApp Redirect Function
+// ==========================================
+// WHATSAPP SEND NOTICE FUNCTION (ADDED HERE)
+// ==========================================
 window.sendWhatsAppNotice = (phone, name, orderId, total, itemsText) => {
-  if (!phone || phone === 'N/A') {
-    alert("Customer phone number not available!");
+  if (!phone || phone === 'N/A' || phone === 'undefined') {
+    alert("Customer phone number not available! (Customer ne form me number nahi daala hoga)");
     return;
   }
   
   let formattedPhone = phone.toString().replace(/\D/g, '');
-  if (formattedPhone.length === 10) formattedPhone = '91' + formattedPhone;
+  if (formattedPhone.length === 10) formattedPhone = '91' + formattedPhone; // Country code for India
 
   const decodedName = decodeURIComponent(name);
   const decodedItems = decodeURIComponent(itemsText);
@@ -315,18 +317,25 @@ async function loadOrders() {
             const items = (o.items || []).map(i => `${i.title} (x${i.quantity || 1})`).join('<br/>');
             const itemsRaw = (o.items || []).map(i => `• ${i.title} (x${i.quantity || 1})`).join('%0A');
             const status = o.status || 'Pending';
-            const customerPhone = o.customerPhone || o.phone || '';
+            
+            // Extract phone properly based on what your app.js saves
+            const customerPhone = o.customerPhone || o.phone || 'N/A';
             const encodedName = encodeURIComponent(o.customerName || 'Customer');
             const encodedItems = encodeURIComponent(itemsRaw);
 
             return `
               <tr>
                 <td><b>#${doc.id.substring(0,8).toUpperCase()}</b><br/><small style="color:#555;">${items}</small></td>
-                <td><b>${o.customerName || 'N/A'}</b><br/><small>${o.customerEmail || ''}</small><br/><small>${customerPhone}</small><br/><small style="color:#777;">${o.address || ''}</small></td>
+                <td>
+                  <b>${o.customerName || 'N/A'}</b><br/>
+                  <small>${o.customerEmail || ''}</small><br/>
+                  <small style="color:#2874f0; font-weight:600;">${customerPhone}</small><br/>
+                  <small style="color:#777;">${o.address || ''}</small>
+                </td>
                 <td><b>₹${(o.totalAmount || 0).toFixed(2)}</b><br/><small>${o.paymentMode || ''}</small></td>
                 <td><span class="status-badge status-${status}">${status}</span></td>
                 <td>
-                  <select onchange="updateOrderStatus('${doc.id}', this.value)">
+                  <select onchange="updateOrderStatus('${doc.id}', this.value)" style="width: 100%; margin-bottom: 6px; padding: 4px;">
                     <option value="Pending" ${status === 'Pending' ? 'selected' : ''}>Pending</option>
                     <option value="Accepted" ${status === 'Accepted' ? 'selected' : ''}>Accepted</option>
                     <option value="Processing" ${status === 'Processing' ? 'selected' : ''}>Processing</option>
@@ -336,7 +345,7 @@ async function loadOrders() {
                   </select>
                   
                   ${status === 'Accepted' ? `
-                    <button class="btn btn-orange" style="margin-top: 6px; width: 100%; font-size: 11px; padding: 5px 8px;" 
+                    <button class="btn btn-orange" style="width: 100%; font-size: 11px; padding: 6px 8px; cursor: pointer; border: none; border-radius: 4px; background: #25D366; color: white; font-weight: bold;" 
                       onclick="sendWhatsAppNotice('${customerPhone}', '${encodedName}', '${doc.id}', ${(o.totalAmount || 0).toFixed(2)}, '${encodedItems}')">
                       📲 Send WhatsApp
                     </button>
