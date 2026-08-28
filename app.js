@@ -25,14 +25,14 @@ const routes = {
 
 const appContainer = document.getElementById('app-view');
 
-// 1. CSS Stylesheet Injection
+// 1. Responsive Stylesheet Injection
 function injectResponsiveStyles() {
   if (document.getElementById('responsive-custom-styles')) return;
   const style = document.createElement('style');
   style.id = 'responsive-custom-styles';
   style.innerHTML = `
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Inter, -apple-system, Roboto, sans-serif; }
-    body { background-color: #f1f3f6; color: #212121; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, Roboto, sans-serif; }
+    body { background-color: #f1f3f6; color: #212121; min-height: 100vh; }
 
     .main-container { max-width: 1240px; margin: 0 auto; padding: 12px; }
 
@@ -227,7 +227,7 @@ function updateCartBadge() {
   }
 }
 
-// Cart System with Quantity Handlers
+// Cart Handlers
 window.addToCart = (id, title, price, image) => {
   const existingItem = window.cart.find(item => item.id === id);
   if (existingItem) {
@@ -595,7 +595,7 @@ function renderUserDashboardPage() {
   document.getElementById('so-btn').onclick = () => signOut(auth).then(() => location.hash = 'auth');
 }
 
-// 12. ADMIN DASHBOARD (With Edit & Add Support)
+// 12. ADMIN DASHBOARD
 async function renderSellerDashboardPage() {
   if (!currentUser || (currentUser.email && currentUser.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase())) {
     appContainer.innerHTML = `<div style="padding:20px; background:#fff;"><h2>Access Denied</h2><p>Only authorized admin can access this page.</p></div>`;
