@@ -1,9 +1,10 @@
 import { db, auth, onAuthStateChanged, googleProvider, signInWithPopup, signOut, signInWithEmailAndPassword, ADMIN_EMAIL } from './firebase-config.js';
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 window.cart = JSON.parse(localStorage.getItem('arcanix_cart')) || [];
 let currentUser = null;
 let editingProductId = null;
+let adminUpiConfig = { upiId: 'merchant@upi', merchantName: 'ArcanixPlus' };
 
 // Standard Reusable Vector SVG Templates
 const VECTOR_ICONS = {
@@ -21,6 +22,23 @@ const VECTOR_ICONS = {
   truck: `<svg class="v-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
   clock: `<svg class="v-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
 };
+
+// Fetch Admin Payment Config
+async function loadAdminPaymentSettings() {
+  try {
+    const snap = await getDoc(doc(db, "settings", "payment"));
+    if (snap.exists()) {
+      const data = snap.data();
+      adminUpiConfig = {
+        upiId: data.upiId || 'merchant@upi',
+        merchantName: data.merchantName || 'ArcanixPlus'
+      };
+    }
+  } catch(e) {
+    console.error("Error loading admin UPI settings:", e);
+  }
+}
+loadAdminPaymentSettings();
 
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
@@ -562,12 +580,21 @@ function renderCartPage() {
   `;
 }
 
-// 8. CHECKOUT PAGE (With Payment Options & Interactive Pay Now UI)
-function renderCheckoutPage() {
+// Helper: Dynamic Admin UPI Link Builder
+function getDynamicUpiQrUrl(total) {
+  const upiId = encodeURIComponent(adminUpiConfig.upiId || 'merchant@upi');
+  const merchantName = encodeURIComponent(adminUpiConfig.merchantName || 'ArcanixPlus');
+  const upiPayload = `upi://pay?pa=${upiId}&pn=${merchantName}&am=${total}&cu=INR`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(upiPayload)}`;
+}
+
+// 8. CHECKOUT PAGE (With Payment Options & Dynamic Interactive Admin QR UI)
+async function renderCheckoutPage() {
   if (window.cart.length === 0) {
     location.hash = 'cart';
     return;
   }
+  await loadAdminPaymentSettings();
   let total = window.cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
   
   appContainer.innerHTML = `
@@ -610,11 +637,12 @@ function renderCheckoutPage() {
           </div>
         </div>
 
-        <!-- Dynamic Payment Section -->
+        <!-- Dynamic Payment Section with Admin QR -->
         <div id="payment-details-box" style="margin-bottom:20px; padding:14px; border:1px dashed #2874f0; background:#f4f8ff; border-radius:6px; text-align:center;">
-          <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan & Pay ₹${total.toFixed(2)} using any UPI App:</p>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=merchant@upi%26pn=ArcanixPlus%26am=${total}%26cu=INR" alt="UPI QR Code" style="border:2px solid #fff; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.1); margin-bottom:6px;" />
-          <p style="font-size:0.75rem; color:#666;">Scan QR code with GPay/PhonePe to complete payment instant.</p>
+          <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan & Pay ₹${total.toFixed(2)} using any UPI App (${adminUpiConfig.merchantName}):</p>
+          <img src="${getDynamicUpiQrUrl(total)}" alt="UPI QR Code" style="border:2px solid #fff; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.1); margin-bottom:6px;" />
+          <p style="font-size:0.78rem; font-weight:700; color:#2874f0; margin-bottom:2px;">UPI ID: ${adminUpiConfig.upiId}</p>
+          <p style="font-size:0.75rem; color:#666;">Scan QR code with GPay/PhonePe to complete instant payment.</p>
         </div>
 
         <button type="submit" id="confirm-pay-btn" style="width: 100%; padding: 13px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:4px; cursor:pointer; font-size:0.95rem; box-shadow:0 2px 4px rgba(0,0,0,0.15);">
@@ -634,8 +662,9 @@ function renderCheckoutPage() {
       document.getElementById('pay-upi').closest('.payment-option').classList.add('active');
       payBox.style.display = 'block';
       payBox.innerHTML = `
-        <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan & Pay ₹${total.toFixed(2)} using any UPI App:</p>
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=merchant@upi%26pn=ArcanixPlus%26am=${total}%26cu=INR" alt="UPI QR Code" style="border:2px solid #fff; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.1); margin-bottom:6px;" />
+        <p style="font-size:0.85rem; font-weight:600; color:#333; margin-bottom:8px;">Scan & Pay ₹${total.toFixed(2)} using any UPI App (${adminUpiConfig.merchantName}):</p>
+        <img src="${getDynamicUpiQrUrl(total)}" alt="UPI QR Code" style="border:2px solid #fff; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.1); margin-bottom:6px;" />
+        <p style="font-size:0.78rem; font-weight:700; color:#2874f0; margin-bottom:2px;">UPI ID: ${adminUpiConfig.upiId}</p>
         <p style="font-size:0.75rem; color:#666;">Scan QR code with GPay/PhonePe to complete instant payment.</p>
       `;
       payBtn.innerText = `PAY NOW (₹${total.toFixed(2)})`;
@@ -770,12 +799,30 @@ async function renderSellerDashboardPage() {
     return;
   }
 
+  await loadAdminPaymentSettings();
+
   appContainer.innerHTML = `
     <div style="padding: 20px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
       <h2 style="font-size: 1.15rem; margin-bottom: 4px; display:flex; align-items:center; gap:8px;">
         <span>${VECTOR_ICONS.gear}</span> Admin Control Panel (E-Commerce CMS)
       </h2>
-      <p style="color: #666; margin-bottom: 20px; font-size: 0.85rem;">Manage Banners, Categories, Live Products & Customer Orders.</p>
+      <p style="color: #666; margin-bottom: 20px; font-size: 0.85rem;">Manage Payment QR, Banners, Categories, Live Products & Customer Orders.</p>
+
+      <!-- ADMIN QR & PAYMENT SETTINGS SECTION -->
+      <form id="admin-payment-form" style="background: #eef5ff; border: 1px dashed #2874f0; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
+        <h4 style="margin-bottom: 12px; font-size:0.95rem; color:#2874f0;">Payment QR & UPI Settings</h4>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+          <div style="flex: 1 1 220px; margin-bottom:8px;">
+            <label style="font-size:0.8rem; font-weight:600;">Admin UPI ID (e.g. name@upi)</label>
+            <input type="text" id="qr-upi-id" required value="${adminUpiConfig.upiId}" placeholder="yourname@upi" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:3px; font-size:0.85rem;"/>
+          </div>
+          <div style="flex: 1 1 220px; margin-bottom:8px;">
+            <label style="font-size:0.8rem; font-weight:600;">Business / Merchant Name</label>
+            <input type="text" id="qr-merchant-name" required value="${adminUpiConfig.merchantName}" placeholder="Arcanix Store" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:3px; font-size:0.85rem;"/>
+          </div>
+        </div>
+        <button type="submit" id="qr-save-btn" style="padding:8px 16px; background:#2874f0; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer; font-size:0.85rem;">Save UPI QR Settings</button>
+      </form>
 
       <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
         <form id="admin-banner-form" style="flex: 1 1 280px; background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px;">
@@ -831,6 +878,31 @@ async function renderSellerDashboardPage() {
       <div id="admin-items-list" style="overflow-x: auto;"></div>
     </div>
   `;
+
+  // Submit Admin Payment Settings Form
+  document.getElementById('admin-payment-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('qr-save-btn');
+    const newUpiId = document.getElementById('qr-upi-id').value.trim();
+    const newMerchantName = document.getElementById('qr-merchant-name').value.trim();
+
+    try {
+      btn.disabled = true;
+      btn.innerText = "Saving Settings...";
+      await setDoc(doc(db, "settings", "payment"), {
+        upiId: newUpiId,
+        merchantName: newMerchantName,
+        updatedAt: new Date()
+      });
+      adminUpiConfig = { upiId: newUpiId, merchantName: newMerchantName };
+      alert("Payment UPI QR Settings saved successfully!");
+    } catch(err) {
+      alert("Error saving payment settings: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = "Save UPI QR Settings";
+    }
+  };
 
   async function populateCategoryDropdown() {
     const catSelect = document.getElementById('p-category');
