@@ -1,5 +1,5 @@
 import { db, auth, onAuthStateChanged, googleProvider, signInWithPopup, signOut, signInWithEmailAndPassword, ADMIN_EMAIL } from './firebase-config.js';
-import { collection, getDocs, doc, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 window.cart = JSON.parse(localStorage.getItem('arcanix_cart')) || [];
 let currentUser = null;
@@ -14,7 +14,8 @@ const VECTOR_ICONS = {
   gear: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   star: `<svg class="v-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
   globe: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>`,
-  party: `<svg class="v-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
+  party: `<svg class="v-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  box: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`
 };
 
 // Fetch Admin Payment Config
@@ -112,6 +113,13 @@ function injectResponsiveStyles() {
     .payment-option.active { border-color: #2874f0; background: #f0f7ff; }
     .upi-btn { padding: 6px 12px; border: 1px solid #2874f0; background: #fff; color: #2874f0; border-radius: 4px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .upi-btn.active { background: #2874f0; color: #fff; }
+
+    /* Profile Card Styling */
+    .profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: #2874f0; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 800; box-shadow: 0 2px 6px rgba(40,116,240,0.3); }
+    .profile-card { background: #fff; border-radius: 6px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 14px; }
+    .profile-label { font-size: 0.75rem; font-weight: 700; color: #878787; text-transform: uppercase; margin-bottom: 4px; }
+    .profile-value { font-size: 0.92rem; font-weight: 600; color: #212121; }
+    .status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
   `;
   document.head.appendChild(style);
 }
@@ -568,7 +576,7 @@ function getUpiPayLink(total, appTarget = 'generic') {
   }
 }
 
-// CHECKOUT PAGE
+// CHECKOUT PAGE WITH PHONE NUMBER FIELD
 async function renderCheckoutPage() {
   if (!currentUser) {
     alert("Authentication required for checkout. Please login first.");
@@ -592,12 +600,17 @@ async function renderCheckoutPage() {
       <form id="checkout-form">
         <div style="margin-bottom:12px;">
           <label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Full Name</label>
-          <input type="text" id="cust-name" required placeholder="John Doe" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"/>
+          <input type="text" id="cust-name" required value="${currentUser.displayName || ''}" placeholder="Enter full name" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"/>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Phone Number (WhatsApp Preferred)</label>
+          <input type="tel" id="cust-phone" required placeholder="10-digit mobile number" pattern="[0-9]{10}" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"/>
         </div>
         
         <div style="margin-bottom:14px;">
           <label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Delivery Address</label>
-          <textarea id="cust-address" required placeholder="Enter complete delivery address..." style="width:100%; height:75px; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"></textarea>
+          <textarea id="cust-address" required placeholder="Enter complete delivery address with PIN code..." style="width:100%; height:75px; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"></textarea>
         </div>
 
         <div style="margin-bottom:20px;">
@@ -691,7 +704,6 @@ async function renderCheckoutPage() {
     }
   };
 
-  // Initial render of UPI app options
   renderUpiAppSection();
 
   document.getElementById('checkout-form').onsubmit = async (e) => {
@@ -706,6 +718,7 @@ async function renderCheckoutPage() {
       const orderPayload = {
         customerEmail: currentUser.email,
         customerName: document.getElementById('cust-name').value,
+        customerPhone: document.getElementById('cust-phone').value,
         address: document.getElementById('cust-address').value,
         paymentMode: selectedPayOption,
         items: window.cart,
@@ -745,7 +758,8 @@ function renderOrderConfirmationPage() {
         ${VECTOR_ICONS.party} Order Received!
       </h2>
       <p style="margin-bottom: 24px; color:#666; font-size: 0.9rem;">Your order details have been saved successfully and are being processed.</p>
-      <a href="#home" style="display:inline-block; padding:12px 28px; background:#2874f0; color:#fff; text-decoration:none; border-radius:2px; font-weight:700;">Continue Shopping</a>
+      <a href="#account" style="display:inline-block; margin-right: 10px; padding:12px 24px; background:#2874f0; color:#fff; text-decoration:none; border-radius:2px; font-weight:700;">View My Orders</a>
+      <a href="#home" style="display:inline-block; padding:12px 24px; background:#f0f0f0; color:#333; text-decoration:none; border-radius:2px; font-weight:700;">Continue Shopping</a>
     </div>
   `;
 }
@@ -787,24 +801,114 @@ function renderAuthPage() {
   };
 }
 
-// USER DASHBOARD (PROFILE PAGE)
-function renderUserDashboardPage() {
+// PROPER USER DASHBOARD / PROFILE PAGE
+async function renderUserDashboardPage() {
   if (!currentUser) { location.hash = 'auth'; return; }
   const isAdmin = currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-  
+  const userName = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'User');
+  const userInitial = userName[0].toUpperCase();
+
   appContainer.innerHTML = `
-    <div style="padding: 24px; background:#fff; text-align: center; max-width: 450px; margin: 0 auto; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-      <h3 style="font-size: 1.15rem;">My Account</h3>
-      <p style="color: #666; margin: 6px 0 20px 0; font-size: 0.88rem;">${currentUser.email}</p>
+    <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
       
-      <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 20px;">
-        ${isAdmin ? `<a href="admin.html" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:11px; background:#2874f0; color:#fff; text-decoration:none; font-weight:700; border-radius:2px; font-size:0.9rem;"><span>${VECTOR_ICONS.gear}</span> Open Admin Panel</a>` : ''}
+      <!-- Profile Header Card -->
+      <div class="profile-card" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div class="profile-avatar">${userInitial}</div>
+          <div>
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: #212121;">Hello, ${userName}</h2>
+            <p style="color: #666; font-size: 0.88rem; font-weight: 500;">${currentUser.email}</p>
+          </div>
+        </div>
+        ${isAdmin ? `<span class="status-badge" style="background: #e3f2fd; color: #1976d2;">Admin Account</span>` : `<span class="status-badge" style="background: #e8f5e9; color: #2e7d32;">Verified Customer</span>`}
       </div>
-      
-      <button id="so-btn" style="width:100%; padding:11px; background:none; border:1px solid #ccc; border-radius:2px; cursor:pointer; font-weight:600; color:#d32f2f; font-size:0.9rem;">Logout Account</button>
+
+      <!-- Main Profile Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
+        
+        <!-- Personal Information Section -->
+        <div class="profile-card">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #212121; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+            <span>${VECTOR_ICONS.user}</span> Account Details
+          </h3>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <div class="profile-label">Full Name</div>
+              <div class="profile-value">${userName}</div>
+            </div>
+            <div>
+              <div class="profile-label">Email Address</div>
+              <div class="profile-value">${currentUser.email}</div>
+            </div>
+            <div>
+              <div class="profile-label">Account UID</div>
+              <div class="profile-value" style="font-size:0.75rem; color:#666; font-family:monospace;">${currentUser.uid}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order History Container -->
+        <div class="profile-card">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #212121; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+            <span>${VECTOR_ICONS.box}</span> My Orders
+          </h3>
+          <div id="user-orders-list">
+            <p style="font-size: 0.85rem; color: #666;">Loading your recent orders...</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick Actions Card -->
+      <div class="profile-card" style="display: flex; flex-direction: column; gap: 10px;">
+        ${isAdmin ? `<a href="admin.html" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:11px; background:#2874f0; color:#fff; text-decoration:none; font-weight:700; border-radius:4px; font-size:0.9rem;"><span>${VECTOR_ICONS.gear}</span> Open Admin Dashboard</a>` : ''}
+        <button id="so-btn" style="width:100%; padding:11px; background:#fff; border:1px solid #d32f2f; border-radius:4px; cursor:pointer; font-weight:700; color:#d32f2f; font-size:0.9rem; transition: background 0.2s;" onmouseover="this.style.background='#fdf2f2'" onmouseout="this.style.background='#fff'">Logout Account</button>
+      </div>
+
     </div>
   `;
+
   document.getElementById('so-btn').onclick = () => signOut(auth).then(() => location.hash = 'auth');
+
+  // Load User Recent Orders
+  fetchUserOrders(currentUser.email);
+}
+
+// Fetch Orders for User Profile
+async function fetchUserOrders(userEmail) {
+  const container = document.getElementById('user-orders-list');
+  if (!container) return;
+
+  try {
+    const q = query(collection(db, "orders"), where("customerEmail", "==", userEmail));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      container.innerHTML = '<p style="font-size: 0.85rem; color: #878787;">You have not placed any orders yet.</p>';
+      return;
+    }
+
+    container.innerHTML = snap.docs.slice(0, 5).map(docSnap => {
+      const o = docSnap.data();
+      const statusColor = o.status === 'Accepted' ? '#388e3c' : o.status === 'Rejected' ? '#d32f2f' : '#f57c00';
+      return `
+        <div style="border-bottom: 1px solid #f0f0f0; padding: 10px 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
+            <span style="font-weight: 700; color: #212121;">Order Total: ₹${o.totalAmount}</span>
+            <span style="font-weight: 700; color: ${statusColor}; background: ${statusColor}15; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">${o.status || 'Pending'}</span>
+          </div>
+          <div style="font-size: 0.8rem; color: #666; margin-top: 4px;">
+            Items: ${o.items ? o.items.map(i => i.title).join(', ') : 'Product'}
+          </div>
+          ${o.customerPhone ? `<div style="font-size: 0.78rem; color: #878787; margin-top: 2px;">Phone: ${o.customerPhone}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+  } catch(e) {
+    console.error("Error fetching user orders:", e);
+    container.innerHTML = '<p style="font-size: 0.85rem; color: #d32f2f;">Unable to load order history.</p>';
+  }
 }
 
 // DATA FETCHING GRID
