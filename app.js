@@ -84,6 +84,13 @@ function injectResponsiveStyles() {
     .drawer-links a { padding: 14px 16px; color: #333; text-decoration: none; font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #f0f0f0; }
     
     .qty-btn { background: #f0f0f0; border: 1px solid #ccc; width: 28px; height: 28px; font-weight: bold; cursor: pointer; border-radius: 4px; }
+    
+    .status-badge { padding: 4px 8px; border-radius: 3px; font-weight: 700; font-size: 0.75rem; display: inline-block; }
+    .status-Pending { background: #fff3cd; color: #856404; }
+    .status-Processing { background: #cce5ff; color: #004085; }
+    .status-Shipped { background: #e2e3e5; color: #383d41; }
+    .status-Delivered { background: #d4edda; color: #155724; }
+    .status-Cancelled { background: #f8d7da; color: #721c24; }
   `;
   document.head.appendChild(style);
 }
@@ -266,6 +273,20 @@ window.deleteItemByAdmin = async (colName, id) => {
     } catch(err) {
       alert("Error deleting: " + err.message);
     }
+  }
+};
+
+// Update Order Status Handler for Admin
+window.updateOrderStatus = async (orderId, newStatus) => {
+  try {
+    await updateDoc(doc(db, "orders", orderId), {
+      status: newStatus,
+      updatedAt: new Date()
+    });
+    alert(`Order status updated to "${newStatus}"!`);
+    renderSellerDashboardPage();
+  } catch(err) {
+    alert("Error updating order status: " + err.message);
   }
 };
 
@@ -505,27 +526,56 @@ function renderCartPage() {
   `;
 }
 
-// 8. CHECKOUT PAGE
+// 8. CHECKOUT PAGE (Saves Orders Realtime to Firestore)
 function renderCheckoutPage() {
+  if (window.cart.length === 0) {
+    location.hash = 'cart';
+    return;
+  }
   let total = window.cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
   appContainer.innerHTML = `
     <div style="padding: 24px; background:#fff; max-width: 550px; margin: 0 auto; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
       <h2 style="margin-bottom: 18px; font-size: 1.15rem; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">Order Summary ($${total.toFixed(2)})</h2>
       <form id="checkout-form">
-        <div style="margin-bottom:14px;"><label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Delivery Address</label><textarea required placeholder="Enter complete address..." style="width:100%; height:80px; padding:10px; border:1px solid #ccc; border-radius:2px; font-size:0.9rem;"></textarea></div>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Full Name</label><input type="text" id="cust-name" required placeholder="John Doe" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:2px; font-size:0.9rem;"/></div>
+        <div style="margin-bottom:14px;"><label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Delivery Address</label><textarea id="cust-address" required placeholder="Enter complete address..." style="width:100%; height:80px; padding:10px; border:1px solid #ccc; border-radius:2px; font-size:0.9rem;"></textarea></div>
         <div style="margin-bottom:20px;"><label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Payment Mode</label>
-          <select style="width:100%; padding:10px; border:1px solid #ccc; border-radius:2px; font-size:0.9rem;"><option>UPI / NetBanking</option><option>Credit / Debit Card</option><option>Cash on Delivery</option></select>
+          <select id="cust-pay-mode" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:2px; font-size:0.9rem;"><option>UPI / NetBanking</option><option>Credit / Debit Card</option><option>Cash on Delivery</option></select>
         </div>
-        <button type="submit" style="width: 100%; padding: 12px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:2px; cursor:pointer; font-size:0.95rem;">CONFIRM & PAY</button>
+        <button type="submit" id="confirm-pay-btn" style="width: 100%; padding: 12px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:2px; cursor:pointer; font-size:0.95rem;">CONFIRM & PAY</button>
       </form>
     </div>
   `;
-  document.getElementById('checkout-form').onsubmit = (e) => {
+
+  document.getElementById('checkout-form').onsubmit = async (e) => {
     e.preventDefault();
-    window.cart = [];
-    localStorage.removeItem('arcanix_cart');
-    updateCartBadge();
-    location.hash = 'order-confirmation';
+    const btn = document.getElementById('confirm-pay-btn');
+    btn.disabled = true;
+    btn.innerText = "Processing Order...";
+
+    try {
+      const orderPayload = {
+        customerEmail: currentUser ? currentUser.email : 'Guest User',
+        customerName: document.getElementById('cust-name').value,
+        address: document.getElementById('cust-address').value,
+        paymentMode: document.getElementById('cust-pay-mode').value,
+        items: window.cart,
+        totalAmount: total,
+        status: 'Pending',
+        createdAt: new Date()
+      };
+
+      await addDoc(collection(db, "orders"), orderPayload);
+
+      window.cart = [];
+      localStorage.removeItem('arcanix_cart');
+      updateCartBadge();
+      location.hash = 'order-confirmation';
+    } catch (err) {
+      alert("Error placing order: " + err.message);
+      btn.disabled = false;
+      btn.innerText = "CONFIRM & PAY";
+    }
   };
 }
 
@@ -534,7 +584,7 @@ function renderOrderConfirmationPage() {
   appContainer.innerHTML = `
     <div style="text-align: center; padding: 50px 16px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
       <h2 style="color: #388e3c; font-size: 1.4rem; margin-bottom:8px;">🎉 Order Placed Successfully!</h2>
-      <p style="margin-bottom: 24px; color:#666; font-size: 0.9rem;">An email confirmation has been sent to your registered account.</p>
+      <p style="margin-bottom: 24px; color:#666; font-size: 0.9rem;">Your order details have been received and are being processed by admin.</p>
       <a href="#home" style="display:inline-block; padding:12px 28px; background:#2874f0; color:#fff; text-decoration:none; border-radius:2px; font-weight:700;">Continue Shopping</a>
     </div>
   `;
@@ -595,7 +645,7 @@ function renderUserDashboardPage() {
   document.getElementById('so-btn').onclick = () => signOut(auth).then(() => location.hash = 'auth');
 }
 
-// 12. ADMIN DASHBOARD
+// 12. ADMIN DASHBOARD (With Full Order Management)
 async function renderSellerDashboardPage() {
   if (!currentUser || (currentUser.email && currentUser.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase())) {
     appContainer.innerHTML = `<div style="padding:20px; background:#fff;"><h2>Access Denied</h2><p>Only authorized admin can access this page.</p></div>`;
@@ -604,8 +654,8 @@ async function renderSellerDashboardPage() {
 
   appContainer.innerHTML = `
     <div style="padding: 20px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-      <h2 style="font-size: 1.15rem; margin-bottom: 4px;">⚙️ Admin Panel (E-Commerce CMS)</h2>
-      <p style="color: #666; margin-bottom: 20px; font-size: 0.85rem;">Manage Banners, Categories & Live Products.</p>
+      <h2 style="font-size: 1.15rem; margin-bottom: 4px;">⚙️ Admin Control Panel (E-Commerce CMS)</h2>
+      <p style="color: #666; margin-bottom: 20px; font-size: 0.85rem;">Manage Banners, Categories, Live Products & Customer Orders.</p>
 
       <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
         <form id="admin-banner-form" style="flex: 1 1 280px; background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px;">
@@ -645,7 +695,11 @@ async function renderSellerDashboardPage() {
         </div>
       </form>
 
-      <h4 style="margin-bottom: 12px; margin-top: 24px; font-size:0.95rem;">Manage Live Hero Banners</h4>
+      <!-- ORDER MANAGEMENT MODULE -->
+      <h4 style="margin-bottom: 12px; margin-top: 28px; font-size:1.05rem; color:#2874f0;">📦 Customer Order Management</h4>
+      <div id="admin-orders-list" style="overflow-x: auto; margin-bottom: 30px;"></div>
+
+      <h4 style="margin-bottom: 12px; font-size:0.95rem;">Manage Live Hero Banners</h4>
       <div id="admin-banners-list" style="overflow-x: auto; margin-bottom: 24px;"></div>
 
       <h4 style="margin-bottom: 12px; font-size:0.95rem;">Manage Live Products</h4>
@@ -674,6 +728,68 @@ async function renderSellerDashboardPage() {
   }
 
   await populateCategoryDropdown();
+
+  // Load Customer Orders
+  const ordersContainer = document.getElementById('admin-orders-list');
+  try {
+    const ordersSnap = await getDocs(collection(db, "orders"));
+    if (ordersSnap.empty) {
+      ordersContainer.innerHTML = '<p style="color:#878787; font-size:0.85rem; padding:10px; background:#f9f9f9; border-radius:4px;">No customer orders placed yet.</p>';
+    } else {
+      ordersContainer.innerHTML = `
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <thead>
+            <tr style="background:#f1f3f6; text-align:left;">
+              <th style="padding:10px; border-bottom:2px solid #ddd;">Order Details</th>
+              <th style="padding:10px; border-bottom:2px solid #ddd;">Customer Info</th>
+              <th style="padding:10px; border-bottom:2px solid #ddd;">Total</th>
+              <th style="padding:10px; border-bottom:2px solid #ddd;">Status</th>
+              <th style="padding:10px; border-bottom:2px solid #ddd;">Update Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${ordersSnap.docs.map(docSnap => {
+              const o = docSnap.data();
+              const itemsStr = (o.items || []).map(i => `${i.title} (x${i.quantity || 1})`).join('<br/>');
+              const currentStatus = o.status || 'Pending';
+
+              return `
+                <tr style="border-bottom: 1px solid #eee;">
+                  <td style="padding:10px; vertical-align:top;">
+                    <div style="font-weight:700; color:#2874f0; margin-bottom:4px;">#${docSnap.id.substring(0, 8).toUpperCase()}</div>
+                    <div style="font-size:0.8rem; color:#555;">${itemsStr}</div>
+                  </td>
+                  <td style="padding:10px; vertical-align:top;">
+                    <b>${o.customerName || 'N/A'}</b><br/>
+                    <span style="font-size:0.78rem; color:#666;">${o.customerEmail || ''}</span><br/>
+                    <span style="font-size:0.78rem; color:#444;">📍 ${o.address || 'No Address'}</span>
+                  </td>
+                  <td style="padding:10px; vertical-align:top;">
+                    <b>$${(o.totalAmount || 0).toFixed(2)}</b><br/>
+                    <span style="font-size:0.75rem; color:#666;">${o.paymentMode || ''}</span>
+                  </td>
+                  <td style="padding:10px; vertical-align:top;">
+                    <span class="status-badge status-${currentStatus}">${currentStatus}</span>
+                  </td>
+                  <td style="padding:10px; vertical-align:top;">
+                    <select onchange="updateOrderStatus('${docSnap.id}', this.value)" style="padding:5px; border-radius:3px; border:1px solid #ccc; font-size:0.8rem; outline:none; cursor:pointer;">
+                      <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending ⏳</option>
+                      <option value="Processing" ${currentStatus === 'Processing' ? 'selected' : ''}>Processing ⚙️</option>
+                      <option value="Shipped" ${currentStatus === 'Shipped' ? 'selected' : ''}>Shipped 🚚</option>
+                      <option value="Delivered" ${currentStatus === 'Delivered' ? 'selected' : ''}>Delivered ✅</option>
+                      <option value="Cancelled" ${currentStatus === 'Cancelled' ? 'selected' : ''}>Cancelled ❌</option>
+                    </select>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+  } catch(err) {
+    ordersContainer.innerHTML = '<p style="color:#d32f2f;">Error fetching orders.</p>';
+  }
 
   window.startEditProduct = async (id) => {
     try {
