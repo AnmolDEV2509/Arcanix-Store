@@ -24,7 +24,7 @@ const routes = {
 
 const appContainer = document.getElementById('app-view');
 
-// 1. CSS Injection
+// 1. CSS Injection & Modern Clean UI
 function injectResponsiveStyles() {
   if (document.getElementById('responsive-custom-styles')) return;
   const style = document.createElement('style');
@@ -33,21 +33,22 @@ function injectResponsiveStyles() {
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: Inter, -apple-system, Roboto, sans-serif; }
     body { background-color: #f1f3f6; color: #212121; }
 
-    .main-container { max-width: 1280px; margin: 0 auto; padding: 12px; }
+    .main-container { max-width: 1240px; margin: 0 auto; padding: 12px; }
 
-    .app-header { position: sticky; top: 0; z-index: 1000; background: #2874f0; color: #ffffff; box-shadow: 0 2px 4px 0 rgba(0,0,0,.08); }
-    .header-top { max-width: 1280px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-    .header-left { display: flex; align-items: center; gap: 14px; }
+    .app-header { position: sticky; top: 0; z-index: 1000; background: #2874f0; color: #ffffff; box-shadow: 0 2px 4px 0 rgba(0,0,0,.1); }
+    .header-top { max-width: 1240px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
     .hamburger-btn { font-size: 1.4rem; cursor: pointer; background: none; border: none; color: #fff; display: flex; align-items: center; }
-    .brand-logo { font-size: 1.3rem; font-weight: 800; color: #fff; text-decoration: none; font-style: italic; }
+    .brand-logo { font-size: 1.35rem; font-weight: 800; color: #fff; text-decoration: none; font-style: italic; letter-spacing: -0.5px; }
     .brand-logo span { color: #ffe500; font-style: normal; }
 
-    .header-search-box { flex: 1; max-width: 600px; position: relative; }
-    .header-search-box input { width: 100%; padding: 9px 42px 9px 16px; border: none; border-radius: 2px; outline: none; font-size: 0.9rem; }
-    .header-search-box button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px 8px; }
+    /* Clean Integrated Search Bar */
+    .header-search-box { flex: 1; max-width: 550px; position: relative; display: flex; align-items: center; }
+    .header-search-box input { width: 100%; padding: 9px 40px 9px 14px; border: none; border-radius: 4px; outline: none; font-size: 0.9rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
+    .header-search-box button { position: absolute; right: 4px; background: none; border: none; cursor: pointer; font-size: 1rem; padding: 6px 10px; color: #2874f0; }
 
-    .header-right { display: flex; align-items: center; gap: 24px; }
-    .header-link { color: #fff; text-decoration: none; font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .header-right { display: flex; align-items: center; gap: 20px; }
+    .header-link { color: #fff; text-decoration: none; font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
     .badge-count { background: #ffe500; color: #000; font-weight: 800; font-size: 0.75rem; padding: 1px 6px; border-radius: 10px; }
 
     .mobile-search-strip { display: none; background: #2874f0; padding: 0 12px 10px 12px; }
@@ -55,26 +56,28 @@ function injectResponsiveStyles() {
     @media (max-width: 767px) {
       .desktop-search { display: none !important; }
       .mobile-search-strip { display: block !important; }
+      .main-container { padding: 8px; }
     }
     @media (min-width: 768px) {
       .hamburger-btn { display: none !important; }
-      .main-container { padding: 16px; }
     }
 
+    /* Product Grid Layout */
     .products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
     @media (min-width: 600px) { .products-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
     @media (min-width: 900px) { .products-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; } }
-    @media (min-width: 1100px) { .products-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; } }
+    @media (min-width: 1100px) { .products-grid { grid-template-columns: repeat(5, 1fr); gap: 14px; } }
 
     .product-card { background: #fff; border-radius: 4px; padding: 12px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; transition: box-shadow 0.2s ease, transform 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     .product-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-2px); }
-    .product-card-img { width: 100%; height: 170px; object-fit: contain; margin-bottom: 10px; }
+    .product-card-img { width: 100%; height: 160px; object-fit: contain; margin-bottom: 10px; }
     .product-card-title { font-size: 0.85rem; font-weight: 500; color: #212121; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 6px; line-height: 1.3; }
     .rating-badge { background: #388e3c; color: #fff; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; display: inline-flex; align-items: center; gap: 2px; width: fit-content; margin-bottom: 6px; }
     .price-row { display: flex; align-items: baseline; gap: 8px; }
     .main-price { font-size: 1rem; font-weight: 700; color: #212121; }
     .offer-tag { font-size: 0.75rem; font-weight: 700; color: #388e3c; }
 
+    /* Side Navigation Drawer */
     .side-drawer { position: fixed; top: 0; left: -280px; width: 270px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.25); z-index: 10000; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .side-drawer.open { left: 0; }
     .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: none; }
@@ -85,11 +88,19 @@ function injectResponsiveStyles() {
   document.head.appendChild(style);
 }
 
-// 2. Navigation Header Setup
+// 2. Navigation Header Fix (Strict Single Instance)
 function setupResponsiveHeader() {
-  const oldHeader = document.getElementById('main-header');
-  if (!oldHeader) {
-    const header = document.createElement('header');
+  // Purane duplicate headers completely remove karo
+  const existingHeaders = document.querySelectorAll('header, .app-header');
+  if (existingHeaders.length > 0) {
+    existingHeaders.forEach((el, index) => {
+      if (index > 0 || el.id !== 'main-header') el.remove();
+    });
+  }
+
+  let header = document.getElementById('main-header');
+  if (!header) {
+    header = document.createElement('header');
     header.id = 'main-header';
     header.className = 'app-header';
     header.innerHTML = `
@@ -242,21 +253,21 @@ window.deleteItemByAdmin = async (colName, id) => {
 // 3. HOME PAGE
 async function renderHomePage() {
   appContainer.innerHTML = `
-    <div id="home-slider-container" style="margin-bottom: 16px;"></div>
+    <div id="home-slider-container" style="margin-bottom: 12px;"></div>
 
-    <div style="background: #fff; padding: 16px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #f0f0f0; padding-bottom: 12px;">
-        <h2 style="font-size: 1.1rem; font-weight: 700; color:#212121;" id="grid-title">Deals of the Day</h2>
+    <div style="background: #fff; padding: 14px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px;">
+        <h2 style="font-size: 1.05rem; font-weight: 700; color:#212121;" id="grid-title">Deals of the Day</h2>
         
         <div style="display: flex; align-items: center; gap: 8px;">
           <label style="font-size: 0.85rem; font-weight: 600; color: #666;">Category:</label>
-          <select id="homepage-cat-dropdown" onchange="handleHomeCategoryChange(this.value)" style="padding: 8px 12px; border: 1px solid #2874f0; border-radius: 4px; background: #fff; font-size: 0.85rem; font-weight: 600; color: #2874f0; outline: none; cursor: pointer;">
+          <select id="homepage-cat-dropdown" onchange="handleHomeCategoryChange(this.value)" style="padding: 6px 10px; border: 1px solid #2874f0; border-radius: 4px; background: #fff; font-size: 0.85rem; font-weight: 600; color: #2874f0; outline: none; cursor: pointer;">
             <option value="">All Categories 📦</option>
           </select>
         </div>
       </div>
 
-      <div class="products-grid" id="home-products-grid"><p style="color: #666;">Loading store items...</p></div>
+      <div class="products-grid" id="home-products-grid"><p style="color: #666; font-size: 0.9rem;">Loading store items...</p></div>
     </div>
   `;
 
@@ -285,24 +296,24 @@ async function fetchBanners() {
     
     container.style.display = 'block';
     container.innerHTML = `
-      <div id="hero-slider" style="position: relative; width: 100%; min-height: 220px; max-height: 350px; overflow: hidden; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); background: #e0e0e0;">
+      <div id="hero-slider" style="position: relative; width: 100%; min-height: 160px; max-height: 300px; overflow: hidden; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); background: #e0e0e0;">
         <div id="slider-track" style="display: flex; transition: transform 0.5s ease-in-out; width: 100%; height: 100%;">
           ${banners.map((b) => `
-            <div style="min-width: 100%; position: relative; height: 260px;">
+            <div style="min-width: 100%; position: relative; height: 220px;">
               <img src="${b.imageUrl ? b.imageUrl.trim() : fallbackImage}" 
                    alt="${b.title || 'Banner Image'}" 
                    onerror="this.onerror=null; this.src='${fallbackImage}';" 
                    style="width: 100%; height: 100%; object-fit: cover; display: block;" />
-              <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.75)); padding: 20px 24px; color: #ffffff;">
-                <h1 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${b.title || 'Special Offer'}</h1>
-                <p style="font-size: 0.95rem; font-weight: 600; color: #ffe500; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">${b.subtitle || ''}</p>
+              <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.75)); padding: 16px 20px; color: #ffffff;">
+                <h1 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${b.title || 'Special Offer'}</h1>
+                <p style="font-size: 0.85rem; font-weight: 600; color: #ffe500; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">${b.subtitle || ''}</p>
               </div>
             </div>
           `).join('')}
         </div>
-        <button onclick="changeSlide(-1, ${banners.length})" style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.4); color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; z-index: 10;">❮</button>
-        <button onclick="changeSlide(1, ${banners.length})" style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.4); color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; z-index: 10;">❯</button>
-        <div id="slider-dots" style="position: absolute; bottom: 10px; right: 20px; display: flex; gap: 6px; z-index: 10;">
+        <button onclick="changeSlide(-1, ${banners.length})" style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.4); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; z-index: 10;">❮</button>
+        <button onclick="changeSlide(1, ${banners.length})" style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.4); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; z-index: 10;">❯</button>
+        <div id="slider-dots" style="position: absolute; bottom: 10px; right: 16px; display: flex; gap: 6px; z-index: 10;">
           ${banners.map((_, i) => `
             <span onclick="goToSlide(${i})" class="slider-dot" style="width: 8px; height: 8px; border-radius: 50%; background: ${i === 0 ? '#fff' : 'rgba(255,255,255,0.5)'}; cursor: pointer;"></span>
           `).join('')}
@@ -379,7 +390,7 @@ async function renderCategoryProductsPage(params) {
 async function renderProductDetailPage(params) {
   const id = params.get('id');
   if (!id) return;
-  appContainer.innerHTML = `<p style="padding:20px; background:#fff;">Loading product specifications...</p>`;
+  appContainer.innerHTML = `<p style="padding:20px; background:#fff;">Loading product details...</p>`;
   try {
     const snap = await getDoc(doc(db, "products", id));
     if (!snap.exists()) return;
@@ -388,25 +399,25 @@ async function renderProductDetailPage(params) {
 
     appContainer.innerHTML = `
       <div style="background: #fff; border-radius:4px; padding: 20px; display: flex; flex-wrap: wrap; gap: 32px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-        <div style="flex: 1 1 320px; text-align: center;">
+        <div style="flex: 1 1 300px; text-align: center;">
           <img src="${p.imageUrl || fallbackProductImg}" 
                onerror="this.onerror=null; this.src='${fallbackProductImg}';" 
-               style="width: 100%; max-height: 380px; object-fit: contain; margin-bottom: 20px;"/>
+               style="width: 100%; max-height: 340px; object-fit: contain; margin-bottom: 20px;"/>
           <div style="display: flex; gap: 12px;">
-            <button onclick="addToCart('${id}', '${p.title}', ${p.price}, '${p.imageUrl}')" style="flex: 1; padding: 14px 8px; font-size: 0.95rem; font-weight:700; background:#ff9f00; color:#fff; border:none; border-radius:2px; cursor:pointer;">ADD TO CART</button>
-            <button onclick="addToCart('${id}', '${p.title}', ${p.price}, '${p.imageUrl}'); location.hash='checkout';" style="flex: 1; padding: 14px 8px; font-size: 0.95rem; font-weight:700; background:#fb641b; color:#fff; border:none; border-radius:2px; cursor:pointer;">BUY NOW</button>
+            <button onclick="addToCart('${id}', '${p.title}', ${p.price}, '${p.imageUrl}')" style="flex: 1; padding: 12px 8px; font-size: 0.9rem; font-weight:700; background:#ff9f00; color:#fff; border:none; border-radius:2px; cursor:pointer;">ADD TO CART</button>
+            <button onclick="addToCart('${id}', '${p.title}', ${p.price}, '${p.imageUrl}'); location.hash='checkout';" style="flex: 1; padding: 12px 8px; font-size: 0.9rem; font-weight:700; background:#fb641b; color:#fff; border:none; border-radius:2px; cursor:pointer;">BUY NOW</button>
           </div>
         </div>
-        <div style="flex: 1 1 320px;">
-          <h1 style="font-size: 1.3rem; font-weight: 500; margin-bottom: 8px; color:#212121; line-height:1.4;">${p.title}</h1>
+        <div style="flex: 1 1 300px;">
+          <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 8px; color:#212121; line-height:1.4;">${p.title}</h1>
           <div class="rating-badge" style="margin-bottom: 12px;">4.5 ★</div>
           <div style="font-size:0.85rem; color:#878787; font-weight:600; margin-bottom:14px;">Category: ${p.category || 'General'}</div>
           <div style="margin-bottom: 20px; border-bottom:1px solid #f0f0f0; padding-bottom:14px;">
-            <span style="font-size: 1.8rem; font-weight:800; color:#212121;">$${p.price}</span>
-            ${p.tag ? `<span style="color:#388e3c; font-size:0.9rem; font-weight:700; margin-left:12px;">${p.tag}</span>` : ''}
+            <span style="font-size: 1.6rem; font-weight:800; color:#212121;">$${p.price}</span>
+            ${p.tag ? `<span style="color:#388e3c; font-size:0.85rem; font-weight:700; margin-left:12px;">${p.tag}</span>` : ''}
           </div>
-          <h4 style="margin-bottom: 8px; font-size: 0.95rem; font-weight:700; color:#212121;">Product Details:</h4>
-          <p style="color: #555; font-size: 0.9rem; line-height: 1.6; white-space: pre-line;">${p.description || 'No description provided.'}</p>
+          <h4 style="margin-bottom: 8px; font-size: 0.9rem; font-weight:700; color:#212121;">Product Details:</h4>
+          <p style="color: #555; font-size: 0.88rem; line-height: 1.6; white-space: pre-line;">${p.description || 'No description provided.'}</p>
         </div>
       </div>
     `;
@@ -420,7 +431,7 @@ function renderSearchResultsPage(params) {
   const query = params.get('q') || '';
   appContainer.innerHTML = `
     <div style="background:#fff; padding: 16px; border-radius:4px;">
-      <h2 style="font-size: 1.1rem; margin-bottom: 12px; color:#212121;">Search Results for "${query}"</h2>
+      <h2 style="font-size: 1.05rem; margin-bottom: 12px; color:#212121;">Search Results for "${query}"</h2>
       <div class="products-grid" id="search-grid"></div>
     </div>
   `;
@@ -437,34 +448,34 @@ function renderCartPage() {
 
   appContainer.innerHTML = `
     <div style="display: flex; flex-wrap: wrap; gap: 16px;">
-      <div style="flex: 2 1 320px; background:#fff; padding: 16px; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-        <h3 style="margin-bottom: 16px; font-size: 1.1rem; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">My Cart (${window.cart.length})</h3>
+      <div style="flex: 2 1 300px; background:#fff; padding: 16px; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+        <h3 style="margin-bottom: 16px; font-size: 1.05rem; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">My Cart (${window.cart.length})</h3>
         ${window.cart.map((item, idx) => `
           <div style="display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
-            <img src="${item.image}" style="width: 70px; height: 70px; object-fit: contain;"/>
+            <img src="${item.image}" style="width: 65px; height: 65px; object-fit: contain;"/>
             <div style="flex: 1;">
-              <h4 style="font-size: 0.9rem; font-weight:500; margin-bottom: 6px; color:#212121;">${item.title}</h4>
-              <div><span style="font-weight:700; font-size: 1.05rem; color:#212121;">$${item.price}</span></div>
+              <h4 style="font-size: 0.88rem; font-weight:500; margin-bottom: 6px; color:#212121;">${item.title}</h4>
+              <div><span style="font-weight:700; font-size: 1rem; color:#212121;">$${item.price}</span></div>
             </div>
             <button onclick="removeFromCart(${idx})" style="background:none; border:none; color: #2874f0; font-size: 0.85rem; font-weight:700; cursor:pointer;">REMOVE</button>
           </div>
         `).join('')}
       </div>
-      <div style="flex: 1 1 260px; background:#fff; padding: 16px; border-radius:4px; height: fit-content; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+      <div style="flex: 1 1 250px; background:#fff; padding: 16px; border-radius:4px; height: fit-content; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
         <h4 style="color: #878787; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 14px; font-size: 0.85rem; font-weight:700;">PRICE DETAILS</h4>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.88rem;">
           <span>Price (${window.cart.length} items)</span>
           <span>$${total.toFixed(2)}</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; color:#388e3c;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.88rem; color:#388e3c;">
           <span>Delivery Charges</span>
           <span>FREE</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 18px; font-weight: 800; border-top: 1px dashed #e0e0e0; padding-top: 14px; font-size: 1.1rem;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 18px; font-weight: 800; border-top: 1px dashed #e0e0e0; padding-top: 14px; font-size: 1.05rem;">
           <span>Total Amount</span>
           <span>$${total.toFixed(2)}</span>
         </div>
-        <button onclick="location.hash='checkout'" style="width: 100%; padding: 13px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:2px; cursor:pointer; font-size:0.95rem;">PLACE ORDER</button>
+        <button onclick="location.hash='checkout'" style="width: 100%; padding: 12px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:2px; cursor:pointer; font-size:0.9rem;">PLACE ORDER</button>
       </div>
     </div>
   `;
@@ -474,14 +485,14 @@ function renderCartPage() {
 function renderCheckoutPage() {
   let total = window.cart.reduce((sum, item) => sum + item.price, 0);
   appContainer.innerHTML = `
-    <div style="padding: 24px; background:#fff; max-width: 600px; margin: 0 auto; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-      <h2 style="margin-bottom: 18px; font-size: 1.2rem; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">Order Summary ($${total.toFixed(2)})</h2>
+    <div style="padding: 24px; background:#fff; max-width: 550px; margin: 0 auto; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+      <h2 style="margin-bottom: 18px; font-size: 1.15rem; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">Order Summary ($${total.toFixed(2)})</h2>
       <form id="checkout-form">
         <div style="margin-bottom:14px;"><label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Delivery Address</label><textarea required placeholder="Enter complete address..." style="width:100%; height:80px; padding:10px; border:1px solid #ccc; border-radius:2px; font-size:0.9rem;"></textarea></div>
         <div style="margin-bottom:20px;"><label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Payment Mode</label>
           <select style="width:100%; padding:10px; border:1px solid #ccc; border-radius:2px; font-size:0.9rem;"><option>UPI / NetBanking</option><option>Credit / Debit Card</option><option>Cash on Delivery</option></select>
         </div>
-        <button type="submit" style="width: 100%; padding: 14px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:2px; cursor:pointer; font-size:1rem;">CONFIRM & PAY</button>
+        <button type="submit" style="width: 100%; padding: 12px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:2px; cursor:pointer; font-size:0.95rem;">CONFIRM & PAY</button>
       </form>
     </div>
   `;
@@ -498,8 +509,8 @@ function renderCheckoutPage() {
 function renderOrderConfirmationPage() {
   appContainer.innerHTML = `
     <div style="text-align: center; padding: 50px 16px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-      <h2 style="color: #388e3c; font-size: 1.5rem; margin-bottom:8px;">🎉 Order Placed Successfully!</h2>
-      <p style="margin-bottom: 24px; color:#666; font-size: 0.95rem;">An email confirmation has been sent to your registered account.</p>
+      <h2 style="color: #388e3c; font-size: 1.4rem; margin-bottom:8px;">🎉 Order Placed Successfully!</h2>
+      <p style="margin-bottom: 24px; color:#666; font-size: 0.9rem;">An email confirmation has been sent to your registered account.</p>
       <a href="#home" style="display:inline-block; padding:12px 28px; background:#2874f0; color:#fff; text-decoration:none; border-radius:2px; font-weight:700;">Continue Shopping</a>
     </div>
   `;
@@ -509,14 +520,14 @@ function renderOrderConfirmationPage() {
 function renderAuthPage() {
   appContainer.innerHTML = `
     <div style="padding: 24px; background:#fff; max-width: 400px; margin: 20px auto; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.12);">
-      <h2 style="text-align: center; margin-bottom: 20px; font-size: 1.3rem; color:#2874f0; font-weight:800;">Login / Sign Up</h2>
-      <button type="button" id="google-login-btn" style="width: 100%; margin-bottom: 16px; padding: 11px; background:#fff; border:1px solid #ccc; border-radius:2px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
+      <h2 style="text-align: center; margin-bottom: 20px; font-size: 1.25rem; color:#2874f0; font-weight:800;">Login / Sign Up</h2>
+      <button type="button" id="google-login-btn" style="width: 100%; margin-bottom: 16px; padding: 10px; background:#fff; border:1px solid #ccc; border-radius:2px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; font-size:0.9rem;">
         <span>🌐</span> Sign in with Google
       </button>
       <form id="email-form">
-        <div style="margin-bottom:12px;"><label style="display:block; font-size:0.85rem; margin-bottom:4px;">Email</label><input type="email" id="a-email" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:2px;"/></div>
-        <div style="margin-bottom:16px;"><label style="display:block; font-size:0.85rem; margin-bottom:4px;">Password</label><input type="password" id="a-pass" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:2px;"/></div>
-        <button type="submit" style="width: 100%; padding: 12px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:2px; cursor:pointer;">CONTINUE</button>
+        <div style="margin-bottom:12px;"><label style="display:block; font-size:0.85rem; margin-bottom:4px;">Email</label><input type="email" id="a-email" required style="width:100%; padding:9px; border:1px solid #ccc; border-radius:2px;"/></div>
+        <div style="margin-bottom:16px;"><label style="display:block; font-size:0.85rem; margin-bottom:4px;">Password</label><input type="password" id="a-pass" required style="width:100%; padding:9px; border:1px solid #ccc; border-radius:2px;"/></div>
+        <button type="submit" style="width: 100%; padding: 11px; background:#fb641b; color:#fff; font-weight:700; border:none; border-radius:2px; cursor:pointer;">CONTINUE</button>
       </form>
     </div>
   `;
@@ -548,13 +559,13 @@ function renderUserDashboardPage() {
   const isAdmin = currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   
   appContainer.innerHTML = `
-    <div style="padding: 24px; background:#fff; text-align: center; max-width: 480px; margin: 0 auto; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-      <h3 style="font-size: 1.2rem;">My Account</h3>
-      <p style="color: #666; margin: 6px 0 20px 0; font-size: 0.9rem;">${currentUser.email}</p>
+    <div style="padding: 24px; background:#fff; text-align: center; max-width: 450px; margin: 0 auto; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+      <h3 style="font-size: 1.15rem;">My Account</h3>
+      <p style="color: #666; margin: 6px 0 20px 0; font-size: 0.88rem;">${currentUser.email}</p>
       <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 20px;">
-        ${isAdmin ? `<a href="#seller-dashboard" style="display:block; width:100%; padding:12px; background:#2874f0; color:#fff; text-decoration:none; font-weight:700; border-radius:2px;">⚙️ Admin Control Panel (CMS)</a>` : ''}
+        ${isAdmin ? `<a href="#seller-dashboard" style="display:block; width:100%; padding:11px; background:#2874f0; color:#fff; text-decoration:none; font-weight:700; border-radius:2px; font-size:0.9rem;">⚙️ Admin Control Panel (CMS)</a>` : ''}
       </div>
-      <button id="so-btn" style="width:100%; padding:12px; background:none; border:1px solid #ccc; border-radius:2px; cursor:pointer; font-weight:600; color:#d32f2f;">Logout Account</button>
+      <button id="so-btn" style="width:100%; padding:11px; background:none; border:1px solid #ccc; border-radius:2px; cursor:pointer; font-weight:600; color:#d32f2f; font-size:0.9rem;">Logout Account</button>
     </div>
   `;
   document.getElementById('so-btn').onclick = () => signOut(auth).then(() => location.hash = 'auth');
@@ -569,20 +580,20 @@ async function renderSellerDashboardPage() {
 
   appContainer.innerHTML = `
     <div style="padding: 20px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-      <h2 style="font-size: 1.2rem; margin-bottom: 4px;">⚙️ Admin Panel (E-Commerce CMS)</h2>
+      <h2 style="font-size: 1.15rem; margin-bottom: 4px;">⚙️ Admin Panel (E-Commerce CMS)</h2>
       <p style="color: #666; margin-bottom: 20px; font-size: 0.85rem;">Manage Banners, Categories & Live Products.</p>
 
       <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
-        <form id="admin-banner-form" style="flex: 1 1 300px; background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px;">
-          <h4 style="margin-bottom: 12px;">1. Add Hero Banner</h4>
+        <form id="admin-banner-form" style="flex: 1 1 280px; background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px;">
+          <h4 style="margin-bottom: 12px; font-size:0.95rem;">1. Add Hero Banner</h4>
           <div style="margin-bottom:8px;"><label style="font-size:0.8rem;">Title</label><input type="text" id="b-title" required placeholder="FESTIVE SALE" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <div style="margin-bottom:8px;"><label style="font-size:0.8rem;">Subtitle</label><input type="text" id="b-subtitle" placeholder="Up to 80% OFF" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <div style="margin-bottom:12px;"><label style="font-size:0.8rem;">Image URL</label><input type="url" id="b-image" required placeholder="https://..." style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <button type="submit" style="width:100%; padding:8px; background:#fb641b; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer;">Save Banner</button>
         </form>
 
-        <form id="admin-cat-form" style="flex: 1 1 300px; background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px;">
-          <h4 style="margin-bottom: 12px;">2. Add New Category</h4>
+        <form id="admin-cat-form" style="flex: 1 1 280px; background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px;">
+          <h4 style="margin-bottom: 12px; font-size:0.95rem;">2. Add New Category</h4>
           <div style="margin-bottom:8px;"><label style="font-size:0.8rem;">Category Name</label><input type="text" id="c-name" required placeholder="Electronics" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <div style="margin-bottom:12px;"><label style="font-size:0.8rem;">Icon Emoji</label><input type="text" id="c-icon" placeholder="⚡" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <button type="submit" id="c-submit-btn" style="width:100%; padding:8px; background:#2874f0; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer;">Save Category</button>
@@ -590,27 +601,27 @@ async function renderSellerDashboardPage() {
       </div>
 
       <form id="seller-add-form" style="background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 24px;">
-        <h4 style="margin-bottom: 12px;">3. Publish New Product</h4>
+        <h4 style="margin-bottom: 12px; font-size:0.95rem;">3. Publish New Product</h4>
         <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-          <div style="flex: 1 1 200px; margin-bottom:8px;"><label style="font-size:0.8rem;">Title</label><input type="text" id="p-title" required placeholder="Headphones" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <div style="flex: 1 1 200px; margin-bottom:8px;">
+          <div style="flex: 1 1 180px; margin-bottom:8px;"><label style="font-size:0.8rem;">Title</label><input type="text" id="p-title" required placeholder="Headphones" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
+          <div style="flex: 1 1 180px; margin-bottom:8px;">
             <label style="font-size:0.8rem;">Select Category</label>
             <select id="p-category" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius:2px; background:#fff; font-size:0.85rem;">
               <option value="General">General</option>
             </select>
           </div>
-          <div style="flex: 1 1 200px; margin-bottom:8px;"><label style="font-size:0.8rem;">Price ($)</label><input type="number" step="0.01" id="p-price" required placeholder="49.99" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <div style="flex: 1 1 200px; margin-bottom:8px;"><label style="font-size:0.8rem;">Offer Tag</label><input type="text" id="p-tag" placeholder="Hot Deal" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
+          <div style="flex: 1 1 180px; margin-bottom:8px;"><label style="font-size:0.8rem;">Price ($)</label><input type="number" step="0.01" id="p-price" required placeholder="49.99" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
+          <div style="flex: 1 1 180px; margin-bottom:8px;"><label style="font-size:0.8rem;">Offer Tag</label><input type="text" id="p-tag" placeholder="Hot Deal" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <div style="flex: 1 1 100%; margin-bottom:8px;"><label style="font-size:0.8rem;">Image URL</label><input type="url" id="p-image" required placeholder="https://..." style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <div style="flex: 1 1 100%; margin-bottom:12px;"><label style="font-size:0.8rem;">Description</label><textarea id="p-desc" rows="2" required placeholder="Product specifications..." style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"></textarea></div>
         </div>
         <button type="submit" style="width:100%; padding:10px; background:#fb641b; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer;">PUBLISH PRODUCT NOW</button>
       </form>
 
-      <h4 style="margin-bottom: 12px; margin-top: 24px;">Manage Live Hero Banners</h4>
+      <h4 style="margin-bottom: 12px; margin-top: 24px; font-size:0.95rem;">Manage Live Hero Banners</h4>
       <div id="admin-banners-list" style="overflow-x: auto; margin-bottom: 24px;"></div>
 
-      <h4 style="margin-bottom: 12px;">Manage Live Products</h4>
+      <h4 style="margin-bottom: 12px; font-size:0.95rem;">Manage Live Products</h4>
       <div id="admin-items-list" style="overflow-x: auto;"></div>
     </div>
   `;
@@ -707,20 +718,20 @@ async function renderSellerDashboardPage() {
   try {
     const bannerSnap = await getDocs(collection(db, "banners"));
     if (bannerSnap.empty) {
-      bannersContainer.innerHTML = '<p style="color:#878787;">No banners active.</p>';
+      bannersContainer.innerHTML = '<p style="color:#878787; font-size:0.85rem;">No banners active.</p>';
     } else {
       bannersContainer.innerHTML = `
         <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-          <thead><tr style="border-bottom: 2px solid #e0e0e0; text-align:left;"><th style="padding:10px;">Preview</th><th style="padding:10px;">Title</th><th style="padding:10px;">Subtitle</th><th style="padding:10px;">Action</th></tr></thead>
+          <thead><tr style="border-bottom: 2px solid #e0e0e0; text-align:left;"><th style="padding:8px;">Preview</th><th style="padding:8px;">Title</th><th style="padding:8px;">Subtitle</th><th style="padding:8px;">Action</th></tr></thead>
           <tbody>
             ${bannerSnap.docs.map(docSnap => {
               const b = docSnap.data();
               return `
                 <tr style="border-bottom: 1px solid #eee;">
-                  <td style="padding:8px;"><img src="${b.imageUrl}" style="width: 80px; height: 45px; object-fit: cover; border-radius: 4px;"/></td>
-                  <td style="padding:8px;"><b>${b.title || 'N/A'}</b></td>
-                  <td style="padding:8px;">${b.subtitle || '-'}</td>
-                  <td style="padding:8px;"><button onclick="deleteItemByAdmin('banners', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 10px; border-radius:2px; cursor:pointer;">Delete</button></td>
+                  <td style="padding:6px;"><img src="${b.imageUrl}" style="width: 70px; height: 40px; object-fit: cover; border-radius: 3px;"/></td>
+                  <td style="padding:6px;"><b>${b.title || 'N/A'}</b></td>
+                  <td style="padding:6px;">${b.subtitle || '-'}</td>
+                  <td style="padding:6px;"><button onclick="deleteItemByAdmin('banners', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer;">Delete</button></td>
                 </tr>
               `;
             }).join('')}
@@ -736,22 +747,22 @@ async function renderSellerDashboardPage() {
   try {
     const prodSnap = await getDocs(collection(db, "products"));
     if (prodSnap.empty) {
-      itemsContainer.innerHTML = '<p style="color:#878787;">No live products found.</p>';
+      itemsContainer.innerHTML = '<p style="color:#878787; font-size:0.85rem;">No live products found.</p>';
       return;
     }
 
     itemsContainer.innerHTML = `
       <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-        <thead><tr style="border-bottom: 2px solid #e0e0e0; text-align:left;"><th style="padding:10px;">Item</th><th style="padding:10px;">Title</th><th style="padding:10px;">Price</th><th style="padding:10px;">Action</th></tr></thead>
+        <thead><tr style="border-bottom: 2px solid #e0e0e0; text-align:left;"><th style="padding:8px;">Item</th><th style="padding:8px;">Title</th><th style="padding:8px;">Price</th><th style="padding:8px;">Action</th></tr></thead>
         <tbody>
           ${prodSnap.docs.map(docSnap => {
             const data = docSnap.data();
             return `
               <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding:8px;"><img src="${data.imageUrl}" style="width: 40px; height: 40px; object-fit: contain;"/></td>
-                <td style="padding:8px;"><b>${data.title}</b></td>
-                <td style="padding:8px;">$${data.price}</td>
-                <td style="padding:8px;"><button onclick="deleteItemByAdmin('products', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 10px; border-radius:2px; cursor:pointer;">Delete</button></td>
+                <td style="padding:6px;"><img src="${data.imageUrl}" style="width: 36px; height: 36px; object-fit: contain;"/></td>
+                <td style="padding:6px;"><b>${data.title}</b></td>
+                <td style="padding:6px;">$${data.price}</td>
+                <td style="padding:6px;"><button onclick="deleteItemByAdmin('products', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer;">Delete</button></td>
               </tr>
             `;
           }).join('')}
@@ -770,7 +781,7 @@ async function fetchProductsGrid(container, searchQuery = '', categoryFilter = '
     container.innerHTML = '';
     
     if (snap.empty) {
-      container.innerHTML = '<p style="grid-column: 1/-1;">No products found in store.</p>';
+      container.innerHTML = '<p style="grid-column: 1/-1; color:#878787; font-size:0.9rem;">No products found in store.</p>';
       return;
     }
 
@@ -802,9 +813,9 @@ async function fetchProductsGrid(container, searchQuery = '', categoryFilter = '
     });
 
     if (!matchFound) {
-      container.innerHTML = '<p style="grid-column: 1/-1; color:#878787;">No products available for this category.</p>';
+      container.innerHTML = '<p style="grid-column: 1/-1; color:#878787; font-size:0.9rem;">No products available for this selection.</p>';
     }
   } catch (err) {
-    container.innerHTML = `<p>Error loading store items.</p>`;
+    container.innerHTML = `<p style="grid-column: 1/-1;">Error loading store items.</p>`;
   }
 }
