@@ -262,6 +262,28 @@ window.updateOrderStatus = async (orderId, newStatus) => {
   } catch(err) { alert("Error updating status: " + err.message); }
 };
 
+// WhatsApp Redirect Function
+window.sendWhatsAppNotice = (phone, name, orderId, total, itemsText) => {
+  if (!phone || phone === 'N/A') {
+    alert("Customer phone number not available!");
+    return;
+  }
+  
+  let formattedPhone = phone.toString().replace(/\D/g, '');
+  if (formattedPhone.length === 10) formattedPhone = '91' + formattedPhone;
+
+  const decodedName = decodeURIComponent(name);
+  const decodedItems = decodeURIComponent(itemsText);
+
+  const message = `*Hello ${decodedName}!*%0A%0A` +
+    `Aapka Order *#${orderId.substring(0, 8).toUpperCase()}* accept kar liya gaya hai! 🎉%0A%0A` +
+    `*Order Details:*%0A${decodedItems}%0A%0A` +
+    `*Total Amount:* ₹${total}%0A%0A` +
+    `Aapka order jaldi dispatch ho jayega. Thank you for shopping with us!`;
+
+  window.open(`https://wa.me/${formattedPhone}?text=${message}`, '_blank');
+};
+
 // Data Loaders
 async function loadCategoryDropdown() {
   const select = document.getElementById('p-category');
@@ -291,21 +313,34 @@ async function loadOrders() {
           ${snap.docs.map(doc => {
             const o = doc.data();
             const items = (o.items || []).map(i => `${i.title} (x${i.quantity || 1})`).join('<br/>');
+            const itemsRaw = (o.items || []).map(i => `• ${i.title} (x${i.quantity || 1})`).join('%0A');
             const status = o.status || 'Pending';
+            const customerPhone = o.customerPhone || o.phone || '';
+            const encodedName = encodeURIComponent(o.customerName || 'Customer');
+            const encodedItems = encodeURIComponent(itemsRaw);
+
             return `
               <tr>
                 <td><b>#${doc.id.substring(0,8).toUpperCase()}</b><br/><small style="color:#555;">${items}</small></td>
-                <td><b>${o.customerName || 'N/A'}</b><br/><small>${o.customerEmail || ''}</small><br/><small style="color:#777;">${o.address || ''}</small></td>
+                <td><b>${o.customerName || 'N/A'}</b><br/><small>${o.customerEmail || ''}</small><br/><small>${customerPhone}</small><br/><small style="color:#777;">${o.address || ''}</small></td>
                 <td><b>₹${(o.totalAmount || 0).toFixed(2)}</b><br/><small>${o.paymentMode || ''}</small></td>
                 <td><span class="status-badge status-${status}">${status}</span></td>
                 <td>
                   <select onchange="updateOrderStatus('${doc.id}', this.value)">
                     <option value="Pending" ${status === 'Pending' ? 'selected' : ''}>Pending</option>
+                    <option value="Accepted" ${status === 'Accepted' ? 'selected' : ''}>Accepted</option>
                     <option value="Processing" ${status === 'Processing' ? 'selected' : ''}>Processing</option>
                     <option value="Shipped" ${status === 'Shipped' ? 'selected' : ''}>Shipped</option>
                     <option value="Delivered" ${status === 'Delivered' ? 'selected' : ''}>Delivered</option>
                     <option value="Cancelled" ${status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
                   </select>
+                  
+                  ${status === 'Accepted' ? `
+                    <button class="btn btn-orange" style="margin-top: 6px; width: 100%; font-size: 11px; padding: 5px 8px;" 
+                      onclick="sendWhatsAppNotice('${customerPhone}', '${encodedName}', '${doc.id}', ${(o.totalAmount || 0).toFixed(2)}, '${encodedItems}')">
+                      📲 Send WhatsApp
+                    </button>
+                  ` : ''}
                 </td>
               </tr>
             `;
