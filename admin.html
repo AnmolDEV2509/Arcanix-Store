@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arcanix Plus - Admin Control Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: #f1f3f6; color: #212121; min-height: 100vh; }
+    .admin-header { background: #2874f0; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .admin-header h1 { font-size: 1.25rem; font-weight: 800; }
+    .admin-header a { color: #ffe500; text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .admin-container { max-width: 1200px; margin: 20px auto; padding: 0 16px; }
+    .card { background: #fff; padding: 20px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 24px; }
+    .card-title { font-size: 1.05rem; font-weight: 700; color: #2874f0; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+    .form-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+    .form-group { flex: 1 1 200px; margin-bottom: 8px; }
+    .form-group.full { flex: 1 1 100%; }
+    label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; color: #444; }
+    input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85rem; outline: none; }
+    input:focus, select:focus, textarea:focus { border-color: #2874f0; }
+    .btn { padding: 9px 16px; border: none; border-radius: 3px; font-weight: 700; cursor: pointer; font-size: 0.85rem; transition: background 0.2s; }
+    .btn-primary { background: #2874f0; color: #fff; }
+    .btn-orange { background: #fb641b; color: #fff; }
+    .btn-danger { background: #d32f2f; color: #fff; }
+    .btn-secondary { background: #666; color: #fff; }
+    .status-badge { padding: 4px 8px; border-radius: 3px; font-weight: 700; font-size: 0.75rem; display: inline-block; }
+    .status-Pending { background: #fff3cd; color: #856404; }
+    .status-Processing { background: #cce5ff; color: #004085; }
+    .status-Shipped { background: #e2e3e5; color: #383d41; }
+    .status-Delivered { background: #d4edda; color: #155724; }
+    .status-Cancelled { background: #f8d7da; color: #721c24; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #f8f9fa; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <header class="admin-header">
+    <h1>Arcanix CMS Panel</h1>
+    <a href="index.html">← Back to Store</a>
+  </header>
+
+  <div class="admin-container" id="admin-view">
+    <p style="padding: 20px;">Checking admin authorization...</p>
+  </div>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>
