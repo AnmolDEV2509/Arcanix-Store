@@ -267,6 +267,13 @@ function updateCartBadge() {
 
 // Cart Handlers
 window.addToCart = (id, title, price, image) => {
+  // Check if user is logged in
+  if (!currentUser) {
+    alert("Please login first to add items to your cart!");
+    location.hash = 'auth';
+    return false;
+  }
+
   const existingItem = window.cart.find(item => item.id === id);
   if (existingItem) {
     existingItem.quantity = (existingItem.quantity || 1) + 1;
@@ -276,6 +283,18 @@ window.addToCart = (id, title, price, image) => {
   localStorage.setItem('arcanix_cart', JSON.stringify(window.cart));
   updateCartBadge();
   alert(`"${title}" added to Cart!`);
+  return true;
+};
+
+// Buy Now direct flow
+window.buyNow = (id, title, price, image) => {
+  if (!currentUser) {
+    alert("Please login to proceed with your purchase!");
+    location.hash = 'auth';
+    return;
+  }
+  addToCart(id, title, price, image);
+  location.hash = 'checkout';
 };
 
 window.changeCartQty = (index, delta) => {
@@ -452,7 +471,7 @@ async function renderProductDetailPage(params) {
                style="width: 100%; max-height: 340px; object-fit: contain; margin-bottom: 20px;"/>
           <div style="display: flex; gap: 12px;">
             <button onclick="addToCart('${id}', '${p.title}', ${p.price}, '${p.imageUrl}')" style="flex: 1; padding: 12px 8px; font-size: 0.9rem; font-weight:700; background:#ff9f00; color:#fff; border:none; border-radius:2px; cursor:pointer;">ADD TO CART</button>
-            <button onclick="addToCart('${id}', '${p.title}', ${p.price}, '${p.imageUrl}'); location.hash='checkout';" style="flex: 1; padding: 12px 8px; font-size: 0.9rem; font-weight:700; background:#fb641b; color:#fff; border:none; border-radius:2px; cursor:pointer;">BUY NOW</button>
+            <button onclick="buyNow('${id}', '${p.title}', ${p.price}, '${p.imageUrl}')" style="flex: 1; padding: 12px 8px; font-size: 0.9rem; font-weight:700; background:#fb641b; color:#fff; border:none; border-radius:2px; cursor:pointer;">BUY NOW</button>
           </div>
         </div>
         <div style="flex: 1 1 300px;">
@@ -554,10 +573,18 @@ function getUpiPayLink(total, appTarget = 'generic') {
 
 // CHECKOUT PAGE
 async function renderCheckoutPage() {
+  // Security Check: Redirect to login if user is not authenticated
+  if (!currentUser) {
+    alert("Authentication required for checkout. Please login first.");
+    location.hash = 'auth';
+    return;
+  }
+
   if (window.cart.length === 0) {
     location.hash = 'cart';
     return;
   }
+  
   await loadAdminPaymentSettings();
   let total = window.cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
   let selectedApp = 'generic';
@@ -623,8 +650,6 @@ async function renderCheckoutPage() {
 
   window.setUpiTarget = (target) => {
     selectedApp = target;
-    // alert is optional, just added for feedback
-    alert(`Selected App: ${target.toUpperCase()}`);
   };
 
   window.selectPaymentMode = (type) => {
@@ -665,7 +690,6 @@ async function renderCheckoutPage() {
     const selectedPayOption = document.querySelector('input[name="pay-mode"]:checked').value;
 
     if (selectedPayOption.includes('UPI')) {
-      // Direct Navigation for Instant App Launch
       const upiDeepLink = getUpiPayLink(total, selectedApp);
       window.location.href = upiDeepLink;
     }
@@ -675,7 +699,7 @@ async function renderCheckoutPage() {
 
     try {
       const orderPayload = {
-        customerEmail: currentUser ? currentUser.email : 'Guest User',
+        customerEmail: currentUser.email,
         customerName: document.getElementById('cust-name').value,
         address: document.getElementById('cust-address').value,
         paymentMode: selectedPayOption,
@@ -736,7 +760,8 @@ function renderAuthPage() {
     e.preventDefault();
     try {
       await signInWithPopup(auth, googleProvider);
-      window.location.hash = '#account';
+      // Auto redirect home or back to previous spot 
+      window.history.length > 1 ? window.history.back() : window.location.hash = '#home';
     } catch(err) {
       alert("Google Login Error: " + err.message);
     }
@@ -746,7 +771,7 @@ function renderAuthPage() {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, document.getElementById('a-email').value, document.getElementById('a-pass').value);
-      window.location.hash = '#account';
+      window.history.length > 1 ? window.history.back() : window.location.hash = '#home';
     } catch(err) {
       alert("Login Error: " + err.message);
     }
