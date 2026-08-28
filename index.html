@@ -5,15 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Arcanix Plus Store</title>
   
-  <!-- Fonts & Icons (Optional UI Support) -->
+  <!-- FontAwesome Icons & Google Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: #f8fafc; color: #1e293b; min-height: 100vh; }
+    header { background: #0f172a; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 1.5rem; font-weight: 700; color: #38bdf8; text-decoration: none; }
+    .nav-btns { display: flex; gap: 10px; align-items: center; }
+    .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-success { background: #10b981; color: #fff; }
+    .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .card { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 15px; }
+    .product-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+    .product-card img { width: 100%; height: 160px; object-fit: cover; }
+    .product-info { padding: 12px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+  </style>
 </head>
 <body>
-  
-  <!-- Main Dynamic View Container -->
-  <div id="app-view"></div>
 
-  <!-- Entry Script (ES Module) -->
+  <header>
+    <a href="#" class="logo">Arcanix Plus</a>
+    <div class="nav-btns" id="nav-auth-section">
+      <button id="login-btn" class="btn btn-primary"><i class="fa-brands fa-google"></i> Login with Google</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="app-view">
+      <!-- Dynamic views load honge -->
+    </div>
+  </div>
+
   <script type="module" src="app.js"></script>
 </body>
 </html>
