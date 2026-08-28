@@ -5,6 +5,23 @@ window.cart = JSON.parse(localStorage.getItem('arcanix_cart')) || [];
 let currentUser = null;
 let editingProductId = null;
 
+// Standard Reusable Vector SVG Templates
+const VECTOR_ICONS = {
+  search: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
+  user: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  cart: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>`,
+  home: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+  gear: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  star: `<svg class="v-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  globe: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>`,
+  box: `<svg class="v-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>`,
+  party: `<svg class="v-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  check: `<svg class="v-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  cross: `<svg class="v-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  truck: `<svg class="v-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+  clock: `<svg class="v-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
+};
+
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
   updateNavState();
@@ -34,6 +51,8 @@ function injectResponsiveStyles() {
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, Roboto, sans-serif; }
     body { background-color: #f1f3f6; color: #212121; min-height: 100vh; }
 
+    .v-icon { vertical-align: middle; display: inline-block; }
+
     .main-container { max-width: 1240px; margin: 0 auto; padding: 12px; }
 
     .app-header { position: sticky; top: 0; z-index: 1000; background: #2874f0; color: #ffffff; box-shadow: 0 2px 4px 0 rgba(0,0,0,.1); }
@@ -45,7 +64,7 @@ function injectResponsiveStyles() {
 
     .header-search-box { flex: 1; max-width: 550px; position: relative; display: flex; align-items: center; }
     .header-search-box input { width: 100%; padding: 9px 40px 9px 14px; border: none; border-radius: 4px; outline: none; font-size: 0.9rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
-    .header-search-box button { position: absolute; right: 4px; background: none; border: none; cursor: pointer; font-size: 1rem; padding: 6px 10px; color: #2874f0; }
+    .header-search-box button { position: absolute; right: 4px; background: none; border: none; cursor: pointer; font-size: 1rem; padding: 6px 10px; color: #2874f0; display: flex; align-items: center; }
 
     .header-right { display: flex; align-items: center; gap: 20px; }
     .header-link { color: #fff; text-decoration: none; font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
@@ -71,7 +90,7 @@ function injectResponsiveStyles() {
     .product-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-2px); }
     .product-card-img { width: 100%; height: 160px; object-fit: contain; margin-bottom: 10px; }
     .product-card-title { font-size: 0.85rem; font-weight: 500; color: #212121; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 6px; line-height: 1.3; }
-    .rating-badge { background: #388e3c; color: #fff; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; display: inline-flex; align-items: center; gap: 2px; width: fit-content; margin-bottom: 6px; }
+    .rating-badge { background: #388e3c; color: #fff; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; display: inline-flex; align-items: center; gap: 3px; width: fit-content; margin-bottom: 6px; }
     .price-row { display: flex; align-items: baseline; gap: 8px; }
     .main-price { font-size: 1rem; font-weight: 700; color: #212121; }
     .offer-tag { font-size: 0.75rem; font-weight: 700; color: #388e3c; }
@@ -85,7 +104,7 @@ function injectResponsiveStyles() {
     
     .qty-btn { background: #f0f0f0; border: 1px solid #ccc; width: 28px; height: 28px; font-weight: bold; cursor: pointer; border-radius: 4px; }
     
-    .status-badge { padding: 4px 8px; border-radius: 3px; font-weight: 700; font-size: 0.75rem; display: inline-block; }
+    .status-badge { padding: 4px 8px; border-radius: 3px; font-weight: 700; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; }
     .status-Pending { background: #fff3cd; color: #856404; }
     .status-Processing { background: #cce5ff; color: #004085; }
     .status-Shipped { background: #e2e3e5; color: #383d41; }
@@ -118,15 +137,15 @@ function setupResponsiveHeader() {
 
         <div class="header-search-box desktop-search">
           <input type="text" id="desktop-search-input" placeholder="Search for products, brands and more..." onkeydown="handleSearch(event, 'desktop-search-input')"/>
-          <button onclick="triggerSearch('desktop-search-input')">🔍</button>
+          <button onclick="triggerSearch('desktop-search-input')">${VECTOR_ICONS.search}</button>
         </div>
 
         <div class="header-right">
           <a href="#account" id="account-nav-btn" class="header-link">
-            <span>👤</span> <span id="auth-btn-text">Login</span>
+            <span>${VECTOR_ICONS.user}</span> <span id="auth-btn-text">Login</span>
           </a>
           <a href="#cart" class="header-link">
-            <span>🛒</span> Cart <span class="badge-count" id="cart-count">0</span>
+            <span>${VECTOR_ICONS.cart}</span> Cart <span class="badge-count" id="cart-count">0</span>
           </a>
         </div>
       </div>
@@ -134,7 +153,7 @@ function setupResponsiveHeader() {
       <div class="mobile-search-strip">
         <div class="header-search-box" style="max-width: 100%;">
           <input type="text" id="mobile-search-input" placeholder="Search products, brands and more..." onkeydown="handleSearch(event, 'mobile-search-input')"/>
-          <button onclick="triggerSearch('mobile-search-input')">🔍</button>
+          <button onclick="triggerSearch('mobile-search-input')">${VECTOR_ICONS.search}</button>
         </div>
       </div>
     `;
@@ -151,9 +170,9 @@ function setupResponsiveHeader() {
         <span style="cursor:pointer;" onclick="toggleDrawer(false)">✕</span>
       </div>
       <div class="drawer-links" id="drawer-menu-links">
-        <a href="#home" onclick="toggleDrawer(false)"><span>🏠</span> Home</a>
-        <a href="#cart" onclick="toggleDrawer(false)"><span>🛒</span> My Cart</a>
-        <a href="#account" onclick="toggleDrawer(false)"><span>👤</span> My Account</a>
+        <a href="#home" onclick="toggleDrawer(false)"><span>${VECTOR_ICONS.home}</span> Home</a>
+        <a href="#cart" onclick="toggleDrawer(false)"><span>${VECTOR_ICONS.cart}</span> My Cart</a>
+        <a href="#account" onclick="toggleDrawer(false)"><span>${VECTOR_ICONS.user}</span> My Account</a>
       </div>
     `;
 
@@ -230,10 +249,10 @@ function updateNavState() {
 
   if (drawerLinks) {
     drawerLinks.innerHTML = `
-      <a href="#home" onclick="toggleDrawer(false)"><span>🏠</span> Home</a>
-      <a href="#cart" onclick="toggleDrawer(false)"><span>🛒</span> My Cart</a>
-      <a href="#account" onclick="toggleDrawer(false)"><span>👤</span> My Account</a>
-      ${isAdmin ? `<a href="#seller-dashboard" onclick="toggleDrawer(false)" style="color:#2874f0; font-weight:700;"><span>⚙️</span> CMS Admin Dashboard</a>` : ''}
+      <a href="#home" onclick="toggleDrawer(false)"><span>${VECTOR_ICONS.home}</span> Home</a>
+      <a href="#cart" onclick="toggleDrawer(false)"><span>${VECTOR_ICONS.cart}</span> My Cart</a>
+      <a href="#account" onclick="toggleDrawer(false)"><span>${VECTOR_ICONS.user}</span> My Account</a>
+      ${isAdmin ? `<a href="#seller-dashboard" onclick="toggleDrawer(false)" style="color:#2874f0; font-weight:700;"><span>${VECTOR_ICONS.gear}</span> CMS Admin Dashboard</a>` : ''}
     `;
   }
 }
@@ -316,7 +335,7 @@ async function renderHomePage() {
         <div style="display: flex; align-items: center; gap: 8px;">
           <label style="font-size: 0.85rem; font-weight: 600; color: #666;">Category:</label>
           <select id="homepage-cat-dropdown" onchange="handleHomeCategoryChange(this.value)" style="padding: 6px 10px; border: 1px solid #2874f0; border-radius: 4px; background: #fff; font-size: 0.85rem; font-weight: 600; color: #2874f0; outline: none; cursor: pointer;">
-            <option value="">All Categories 📦</option>
+            <option value="">All Categories</option>
           </select>
         </div>
       </div>
@@ -413,7 +432,7 @@ async function populateHomeCategoryDropdown() {
         const c = docSnap.data();
         const option = document.createElement('option');
         option.value = c.name;
-        option.textContent = `${c.icon || '📦'} ${c.name}`;
+        option.textContent = c.name;
         catSelect.appendChild(option);
       });
     }
@@ -464,8 +483,8 @@ async function renderProductDetailPage(params) {
         </div>
         <div style="flex: 1 1 300px;">
           <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 8px; color:#212121; line-height:1.4;">${p.title}</h1>
-          <div class="rating-badge" style="margin-bottom: 12px;">4.5 ★</div>
-          <div style="font-size:0.85rem; color:#878787; font-weight:600; margin-bottom:14px;">Category: ${p.category || 'General'}</div>
+          <div class="rating-badge">4.5 ${VECTOR_ICONS.star}</div>
+          <div style="font-size:0.85rem; color:#878787; font-weight:600; margin-bottom:14px; margin-top: 6px;">Category: ${p.category || 'General'}</div>
           <div style="margin-bottom: 20px; border-bottom:1px solid #f0f0f0; padding-bottom:14px;">
             <span style="font-size: 1.6rem; font-weight:800; color:#212121;">$${p.price}</span>
             ${p.tag ? `<span style="color:#388e3c; font-size:0.85rem; font-weight:700; margin-left:12px;">${p.tag}</span>` : ''}
@@ -597,7 +616,9 @@ function renderCheckoutPage() {
 function renderOrderConfirmationPage() {
   appContainer.innerHTML = `
     <div style="text-align: center; padding: 50px 16px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-      <h2 style="color: #388e3c; font-size: 1.4rem; margin-bottom:8px;">🎉 Order Placed Successfully!</h2>
+      <h2 style="color: #388e3c; font-size: 1.4rem; margin-bottom:8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        ${VECTOR_ICONS.party} Order Placed Successfully!
+      </h2>
       <p style="margin-bottom: 24px; color:#666; font-size: 0.9rem;">Your order details have been received and are being processed by admin.</p>
       <a href="#home" style="display:inline-block; padding:12px 28px; background:#2874f0; color:#fff; text-decoration:none; border-radius:2px; font-weight:700;">Continue Shopping</a>
     </div>
@@ -610,7 +631,7 @@ function renderAuthPage() {
     <div style="padding: 24px; background:#fff; max-width: 400px; margin: 20px auto; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.12);">
       <h2 style="text-align: center; margin-bottom: 20px; font-size: 1.25rem; color:#2874f0; font-weight:800;">Login / Sign Up</h2>
       <button type="button" id="google-login-btn" style="width: 100%; margin-bottom: 16px; padding: 10px; background:#fff; border:1px solid #ccc; border-radius:2px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; font-size:0.9rem;">
-        <span>🌐</span> Sign in with Google
+        <span>${VECTOR_ICONS.globe}</span> Sign in with Google
       </button>
       <form id="email-form">
         <div style="margin-bottom:12px;"><label style="display:block; font-size:0.85rem; margin-bottom:4px;">Email</label><input type="email" id="a-email" required style="width:100%; padding:9px; border:1px solid #ccc; border-radius:2px;"/></div>
@@ -651,7 +672,7 @@ function renderUserDashboardPage() {
       <h3 style="font-size: 1.15rem;">My Account</h3>
       <p style="color: #666; margin: 6px 0 20px 0; font-size: 0.88rem;">${currentUser.email}</p>
       <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; margin-bottom: 20px;">
-        ${isAdmin ? `<a href="#seller-dashboard" style="display:block; width:100%; padding:11px; background:#2874f0; color:#fff; text-decoration:none; font-weight:700; border-radius:2px; font-size:0.9rem;">⚙️ Admin Control Panel (CMS)</a>` : ''}
+        ${isAdmin ? `<a href="#seller-dashboard" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:11px; background:#2874f0; color:#fff; text-decoration:none; font-weight:700; border-radius:2px; font-size:0.9rem;"><span>${VECTOR_ICONS.gear}</span> Admin Control Panel (CMS)</a>` : ''}
       </div>
       <button id="so-btn" style="width:100%; padding:11px; background:none; border:1px solid #ccc; border-radius:2px; cursor:pointer; font-weight:600; color:#d32f2f; font-size:0.9rem;">Logout Account</button>
     </div>
@@ -668,7 +689,9 @@ async function renderSellerDashboardPage() {
 
   appContainer.innerHTML = `
     <div style="padding: 20px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-      <h2 style="font-size: 1.15rem; margin-bottom: 4px;">⚙️ Admin Control Panel (E-Commerce CMS)</h2>
+      <h2 style="font-size: 1.15rem; margin-bottom: 4px; display:flex; align-items:center; gap:8px;">
+        <span>${VECTOR_ICONS.gear}</span> Admin Control Panel (E-Commerce CMS)
+      </h2>
       <p style="color: #666; margin-bottom: 20px; font-size: 0.85rem;">Manage Banners, Categories, Live Products & Customer Orders.</p>
 
       <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
@@ -683,7 +706,7 @@ async function renderSellerDashboardPage() {
         <form id="admin-cat-form" style="flex: 1 1 280px; background: #fafafa; padding: 16px; border: 1px solid #eee; border-radius: 4px;">
           <h4 style="margin-bottom: 12px; font-size:0.95rem;">2. Add New Category</h4>
           <div style="margin-bottom:8px;"><label style="font-size:0.8rem;">Category Name</label><input type="text" id="c-name" required placeholder="Electronics" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
-          <div style="margin-bottom:12px;"><label style="font-size:0.8rem;">Icon Emoji</label><input type="text" id="c-icon" placeholder="⚡" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
+          <div style="margin-bottom:12px;"><label style="font-size:0.8rem;">Category Tag</label><input type="text" id="c-icon" placeholder="Featured" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:2px;"/></div>
           <button type="submit" id="c-submit-btn" style="width:100%; padding:8px; background:#2874f0; color:#fff; border:none; border-radius:2px; font-weight:700; cursor:pointer;">Save Category</button>
         </form>
       </div>
@@ -710,7 +733,9 @@ async function renderSellerDashboardPage() {
       </form>
 
       <!-- ORDER MANAGEMENT MODULE -->
-      <h4 style="margin-bottom: 12px; margin-top: 28px; font-size:1.05rem; color:#2874f0;">📦 Customer Order Management</h4>
+      <h4 style="margin-bottom: 12px; margin-top: 28px; font-size:1.05rem; color:#2874f0; display:flex; align-items:center; gap:6px;">
+        <span>${VECTOR_ICONS.box}</span> Customer Order Management
+      </h4>
       <div id="admin-orders-list" style="overflow-x: auto; margin-bottom: 30px;"></div>
 
       <h4 style="margin-bottom: 12px; font-size:0.95rem;">Manage Categories</h4>
@@ -761,7 +786,7 @@ async function renderSellerDashboardPage() {
               const c = docSnap.data();
               return `
                 <tr style="border-bottom: 1px solid #eee;">
-                  <td style="padding:6px; font-size:1.1rem;">${c.icon || '📦'}</td>
+                  <td style="padding:6px;">${VECTOR_ICONS.box}</td>
                   <td style="padding:6px;"><b>${c.name}</b></td>
                   <td style="padding:6px;"><button onclick="deleteItemByAdmin('categories', '${docSnap.id}')" style="background:#d32f2f; color:#fff; border:none; padding:4px 8px; border-radius:2px; cursor:pointer;">Delete</button></td>
                 </tr>
@@ -782,6 +807,13 @@ async function renderSellerDashboardPage() {
     if (ordersSnap.empty) {
       ordersContainer.innerHTML = '<p style="color:#878787; font-size:0.85rem; padding:10px; background:#f9f9f9; border-radius:4px;">No customer orders placed yet.</p>';
     } else {
+      const getStatusBadgeIcon = (status) => {
+        if (status === 'Delivered') return VECTOR_ICONS.check;
+        if (status === 'Cancelled') return VECTOR_ICONS.cross;
+        if (status === 'Shipped') return VECTOR_ICONS.truck;
+        return VECTOR_ICONS.clock;
+      };
+
       ordersContainer.innerHTML = `
         <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
           <thead>
@@ -808,22 +840,22 @@ async function renderSellerDashboardPage() {
                   <td style="padding:10px; vertical-align:top;">
                     <b>${o.customerName || 'N/A'}</b><br/>
                     <span style="font-size:0.78rem; color:#666;">${o.customerEmail || ''}</span><br/>
-                    <span style="font-size:0.78rem; color:#444;">📍 ${o.address || 'No Address'}</span>
+                    <span style="font-size:0.78rem; color:#444;">${o.address || 'No Address'}</span>
                   </td>
                   <td style="padding:10px; vertical-align:top;">
                     <b>$${(o.totalAmount || 0).toFixed(2)}</b><br/>
                     <span style="font-size:0.75rem; color:#666;">${o.paymentMode || ''}</span>
                   </td>
                   <td style="padding:10px; vertical-align:top;">
-                    <span class="status-badge status-${currentStatus}">${currentStatus}</span>
+                    <span class="status-badge status-${currentStatus}">${getStatusBadgeIcon(currentStatus)} ${currentStatus}</span>
                   </td>
                   <td style="padding:10px; vertical-align:top;">
                     <select onchange="updateOrderStatus('${docSnap.id}', this.value)" style="padding:5px; border-radius:3px; border:1px solid #ccc; font-size:0.8rem; outline:none; cursor:pointer;">
-                      <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending ⏳</option>
-                      <option value="Processing" ${currentStatus === 'Processing' ? 'selected' : ''}>Processing ⚙️</option>
-                      <option value="Shipped" ${currentStatus === 'Shipped' ? 'selected' : ''}>Shipped 🚚</option>
-                      <option value="Delivered" ${currentStatus === 'Delivered' ? 'selected' : ''}>Delivered ✅</option>
-                      <option value="Cancelled" ${currentStatus === 'Cancelled' ? 'selected' : ''}>Cancelled ❌</option>
+                      <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending</option>
+                      <option value="Processing" ${currentStatus === 'Processing' ? 'selected' : ''}>Processing</option>
+                      <option value="Shipped" ${currentStatus === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                      <option value="Delivered" ${currentStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                      <option value="Cancelled" ${currentStatus === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
                     </select>
                   </td>
                 </tr>
@@ -873,7 +905,6 @@ async function renderSellerDashboardPage() {
     e.preventDefault();
     const submitBtn = document.getElementById('c-submit-btn');
     const catName = document.getElementById('c-name').value.trim();
-    const catIcon = document.getElementById('c-icon').value.trim();
 
     if (!catName) return;
 
@@ -883,7 +914,6 @@ async function renderSellerDashboardPage() {
 
       await addDoc(collection(db, "categories"), {
         name: catName,
-        icon: catIcon || '📦',
         createdAt: new Date()
       });
 
@@ -1034,7 +1064,7 @@ async function fetchProductsGrid(container, searchQuery = '', categoryFilter = '
                class="product-card-img"/>
           <div>
             <div class="product-card-title">${p.title}</div>
-            <div class="rating-badge">4.5 ★</div>
+            <div class="rating-badge">4.5 ${VECTOR_ICONS.star}</div>
             <div class="price-row">
               <span class="main-price">$${p.price}</span>
               ${p.tag ? `<span class="offer-tag">${p.tag}</span>` : ''}
