@@ -4,6 +4,19 @@ import { collection, getDocs, doc, getDoc, addDoc, setDoc, query, where } from "
 window.cart = JSON.parse(localStorage.getItem('arcanix_cart')) || [];
 let currentUser = null;
 let adminUpiConfig = { upiId: 'merchant@upi', merchantName: 'ArcanixPlus' };
+let bannerTimer = null;
+let currentBannerIndex = 0;
+
+// Security Helper: Escape HTML to prevent XSS attacks
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 // Standard Reusable Vector SVG Templates
 const VECTOR_ICONS = {
@@ -115,7 +128,6 @@ function injectResponsiveStyles() {
     .upi-btn { padding: 6px 12px; border: 1px solid #2874f0; background: #fff; color: #2874f0; border-radius: 4px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .upi-btn.active { background: #2874f0; color: #fff; }
 
-    /* Profile Card Styling */
     .profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: #2874f0; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 800; box-shadow: 0 2px 6px rgba(40,116,240,0.3); }
     .profile-card { background: #fff; border-radius: 6px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 14px; }
     .profile-label { font-size: 0.75rem; font-weight: 700; color: #878787; text-transform: uppercase; margin-bottom: 4px; }
@@ -202,9 +214,9 @@ window.handleSearch = function(e, inputId) {
 };
 
 window.triggerSearch = function(inputId) {
-  const query = document.getElementById(inputId).value.trim();
-  if (query) {
-    location.hash = `search?q=${encodeURIComponent(query)}`;
+  const queryVal = document.getElementById(inputId).value.trim();
+  if (queryVal) {
+    location.hash = `search?q=${encodeURIComponent(queryVal)}`;
   }
 };
 
@@ -222,8 +234,15 @@ window.toggleDrawer = function(open) {
 };
 
 function navigate() {
+  // Clear any existing active banner timers to prevent memory leaks
+  if (bannerTimer) {
+    clearInterval(bannerTimer);
+    bannerTimer = null;
+  }
+
   injectResponsiveStyles();
   setupResponsiveHeader();
+  toggleDrawer(false);
 
   const fullHash = window.location.hash.replace('#', '') || 'home';
   const [route, queryString] = fullHash.split('?');
@@ -248,10 +267,11 @@ function updateNavState() {
   const drawerLinks = document.getElementById('drawer-menu-links');
   if (!authText || !authBtn) return;
 
-  const isAdmin = currentUser && currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = currentUser && currentUser.email && ADMIN_EMAIL && currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   if (currentUser) {
-    authText.innerText = currentUser.displayName ? currentUser.displayName.split(' ')[0] : 'Account';
+    const rawName = currentUser.displayName ? currentUser.displayName.split(' ')[0] : 'Account';
+    authText.innerText = escapeHtml(rawName);
     authBtn.href = '#account';
   } else {
     authText.innerText = 'Login';
@@ -352,13 +372,9 @@ async function renderHomePage() {
   fetchProductsGrid(document.getElementById('home-products-grid'));
 }
 
-let bannerTimer = null;
-let currentBannerIndex = 0;
-
 async function fetchBanners() {
   const container = document.getElementById('home-slider-container');
   if (!container) return;
-  if (bannerTimer) clearInterval(bannerTimer);
 
   try {
     const snap = await getDocs(collection(db, "banners"));
@@ -376,13 +392,13 @@ async function fetchBanners() {
         <div id="slider-track" style="display: flex; transition: transform 0.5s ease-in-out; width: 100%; height: 100%;">
           ${banners.map((b) => `
             <div style="min-width: 100%; position: relative; height: 220px;">
-              <img src="${b.imageUrl ? b.imageUrl.trim() : fallbackImage}" 
-                   alt="${b.title || 'Banner Image'}" 
+              <img src="${b.imageUrl ? escapeHtml(b.imageUrl.trim()) : fallbackImage}" 
+                   alt="${escapeHtml(b.title || 'Banner Image')}" 
                    onerror="this.onerror=null; this.src='${fallbackImage}';" 
                    style="width: 100%; height: 100%; object-fit: cover; display: block;" />
               <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.75)); padding: 16px 20px; color: #ffffff;">
-                <h1 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${b.title || 'Special Offer'}</h1>
-                <p style="font-size: 0.85rem; font-weight: 600; color: #ffe500; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">${b.subtitle || ''}</p>
+                <h1 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${escapeHtml(b.title || 'Special Offer')}</h1>
+                <p style="font-size: 0.85rem; font-weight: 600; color: #ffe500; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">${escapeHtml(b.subtitle || '')}</p>
               </div>
             </div>
           `).join('')}
@@ -407,6 +423,7 @@ async function fetchBanners() {
 }
 
 window.changeSlide = function(direction, totalBanners) {
+  if (!totalBanners) return;
   currentBannerIndex = (currentBannerIndex + direction + totalBanners) % totalBanners;
   updateSliderPosition();
 };
@@ -455,7 +472,7 @@ async function renderCategoryProductsPage(params) {
   const categoryName = params.get('category') || '';
   appContainer.innerHTML = `
     <div style="background:#fff; padding: 16px; border-radius:4px;">
-      <h2 style="font-size: 1.1rem; margin-bottom: 14px; color:#212121;">Showing results for: <b>${categoryName}</b></h2>
+      <h2 style="font-size: 1.1rem; margin-bottom: 14px; color:#212121;">Showing results for: <b>${escapeHtml(categoryName)}</b></h2>
       <div class="products-grid" id="plp-grid"><p style="color: #666;">Loading products...</p></div>
     </div>
   `;
@@ -469,49 +486,59 @@ async function renderProductDetailPage(params) {
   appContainer.innerHTML = `<p style="padding:20px; background:#fff;">Loading product details...</p>`;
   try {
     const snap = await getDoc(doc(db, "products", id));
-    if (!snap.exists()) return;
+    if (!snap.exists()) {
+      appContainer.innerHTML = `<p style="padding:20px; background:#fff;">Product not found.</p>`;
+      return;
+    }
     const p = snap.data();
     const fallbackProductImg = 'https://placehold.co/400x400/e0e0e0/000000?text=No+Image';
+
+    const cleanTitle = escapeHtml(p.title);
+    const cleanImg = p.imageUrl ? escapeHtml(p.imageUrl) : fallbackProductImg;
 
     appContainer.innerHTML = `
       <div style="background: #fff; border-radius:4px; padding: 20px; display: flex; flex-wrap: wrap; gap: 32px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
         <div style="flex: 1 1 300px; text-align: center;">
-          <img src="${p.imageUrl || fallbackProductImg}" 
+          <img src="${cleanImg}" 
                onerror="this.onerror=null; this.src='${fallbackProductImg}';" 
                style="width: 100%; max-height: 340px; object-fit: contain; margin-bottom: 20px;"/>
           <div style="display: flex; gap: 12px;">
-            <button onclick="addToCart('${id}', '${p.title}', ${p.price}, '${p.imageUrl}')" style="flex: 1; padding: 12px 8px; font-size: 0.9rem; font-weight:700; background:#ff9f00; color:#fff; border:none; border-radius:2px; cursor:pointer;">ADD TO CART</button>
-            <button onclick="buyNow('${id}', '${p.title}', ${p.price}, '${p.imageUrl}')" style="flex: 1; padding: 12px 8px; font-size: 0.9rem; font-weight:700; background:#fb641b; color:#fff; border:none; border-radius:2px; cursor:pointer;">BUY NOW</button>
+            <button id="pdp-add-cart" style="flex: 1; padding: 12px 8px; font-size: 0.9rem; font-weight:700; background:#ff9f00; color:#fff; border:none; border-radius:2px; cursor:pointer;">ADD TO CART</button>
+            <button id="pdp-buy-now" style="flex: 1; padding: 12px 8px; font-size: 0.9rem; font-weight:700; background:#fb641b; color:#fff; border:none; border-radius:2px; cursor:pointer;">BUY NOW</button>
           </div>
         </div>
         <div style="flex: 1 1 300px;">
-          <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 8px; color:#212121; line-height:1.4;">${p.title}</h1>
+          <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 8px; color:#212121; line-height:1.4;">${cleanTitle}</h1>
           <div class="rating-badge">4.5 ${VECTOR_ICONS.star}</div>
-          <div style="font-size:0.85rem; color:#878787; font-weight:600; margin-bottom:14px; margin-top: 6px;">Category: ${p.category || 'General'}</div>
+          <div style="font-size:0.85rem; color:#878787; font-weight:600; margin-bottom:14px; margin-top: 6px;">Category: ${escapeHtml(p.category || 'General')}</div>
           <div style="margin-bottom: 20px; border-bottom:1px solid #f0f0f0; padding-bottom:14px;">
             <span style="font-size: 1.6rem; font-weight:800; color:#212121;">₹${p.price}</span>
-            ${p.tag ? `<span style="color:#388e3c; font-size:0.85rem; font-weight:700; margin-left:12px;">${p.tag}</span>` : ''}
+            ${p.tag ? `<span style="color:#388e3c; font-size:0.85rem; font-weight:700; margin-left:12px;">${escapeHtml(p.tag)}</span>` : ''}
           </div>
           <h4 style="margin-bottom: 8px; font-size: 0.9rem; font-weight:700; color:#212121;">Product Details:</h4>
-          <p style="color: #555; font-size: 0.88rem; line-height: 1.6; white-space: pre-line;">${p.description || 'No description provided.'}</p>
+          <p style="color: #555; font-size: 0.88rem; line-height: 1.6; white-space: pre-line;">${escapeHtml(p.description || 'No description provided.')}</p>
         </div>
       </div>
     `;
+
+    document.getElementById('pdp-add-cart').onclick = () => addToCart(id, p.title, p.price, p.imageUrl);
+    document.getElementById('pdp-buy-now').onclick = () => buyNow(id, p.title, p.price, p.imageUrl);
+
   } catch (err) {
-    appContainer.innerHTML = `<p>Error loading product details.</p>`;
+    appContainer.innerHTML = `<p style="padding:20px; background:#fff;">Error loading product details.</p>`;
   }
 }
 
 // SEARCH PAGE
 function renderSearchResultsPage(params) {
-  const query = params.get('q') || '';
+  const queryVal = params.get('q') || '';
   appContainer.innerHTML = `
     <div style="background:#fff; padding: 16px; border-radius:4px;">
-      <h2 style="font-size: 1.05rem; margin-bottom: 12px; color:#212121;">Search Results for "${query}"</h2>
+      <h2 style="font-size: 1.05rem; margin-bottom: 12px; color:#212121;">Search Results for "${escapeHtml(queryVal)}"</h2>
       <div class="products-grid" id="search-grid"></div>
     </div>
   `;
-  fetchProductsGrid(document.getElementById('search-grid'), query);
+  fetchProductsGrid(document.getElementById('search-grid'), queryVal);
 }
 
 // CART PAGE
@@ -528,9 +555,9 @@ function renderCartPage() {
         <h3 style="margin-bottom: 16px; font-size: 1.05rem; border-bottom:1px solid #f0f0f0; padding-bottom:10px;">My Cart (${window.cart.length})</h3>
         ${window.cart.map((item, idx) => `
           <div style="display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
-            <img src="${item.image}" style="width: 65px; height: 65px; object-fit: contain;"/>
+            <img src="${escapeHtml(item.image)}" style="width: 65px; height: 65px; object-fit: contain;"/>
             <div style="flex: 1;">
-              <h4 style="font-size: 0.88rem; font-weight:500; margin-bottom: 6px; color:#212121;">${item.title}</h4>
+              <h4 style="font-size: 0.88rem; font-weight:500; margin-bottom: 6px; color:#212121;">${escapeHtml(item.title)}</h4>
               <div><span style="font-weight:700; font-size: 1rem; color:#212121;">₹${item.price}</span></div>
               <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
                 <button class="qty-btn" onclick="changeCartQty(${idx}, -1)">-</button>
@@ -567,7 +594,8 @@ function getUpiPayLink(total, appTarget = 'generic') {
   const upiId = encodeURIComponent(adminUpiConfig.upiId || 'merchant@upi');
   const merchantName = encodeURIComponent(adminUpiConfig.merchantName || 'ArcanixPlus');
   const amount = total.toFixed(2);
-  const baseParams = `pa=${upiId}&pn=${merchantName}&am=${amount}&cu=INR`;
+  const note = encodeURIComponent('Arcanix Store Purchase');
+  const baseParams = `pa=${upiId}&pn=${merchantName}&am=${amount}&cu=INR&tn=${note}`;
 
   switch(appTarget) {
     case 'gpay': return `tez://upi/pay?${baseParams}`;
@@ -612,12 +640,12 @@ async function renderCheckoutPage() {
       <form id="checkout-form">
         <div style="margin-bottom:12px;">
           <label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Full Name</label>
-          <input type="text" id="cust-name" required value="${currentUser.displayName || ''}" placeholder="Enter full name" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"/>
+          <input type="text" id="cust-name" required value="${escapeHtml(currentUser.displayName || '')}" placeholder="Enter full name" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"/>
         </div>
 
         <div style="margin-bottom:12px;">
           <label style="display:block; font-size:0.85rem; margin-bottom:6px; font-weight:600;">Phone Number (WhatsApp Preferred)</label>
-          <input type="tel" id="cust-phone" required value="${savedPhone}" placeholder="10-digit mobile number" pattern="[0-9]{10}" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"/>
+          <input type="tel" id="cust-phone" required value="${escapeHtml(savedPhone)}" placeholder="10-digit mobile number" pattern="[0-9]{10}" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"/>
         </div>
         
         <div style="margin-bottom:14px;">
@@ -700,9 +728,9 @@ async function renderCheckoutPage() {
       payBox.style.display = 'block';
       payBox.innerHTML = `
         <div style="text-align:left;">
-          <input type="text" placeholder="Card Number (16 digits)" style="width:100%; padding:8px; margin-bottom:8px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem;" />
+          <input type="text" placeholder="Card Number (16 digits)" maxlength="16" style="width:100%; padding:8px; margin-bottom:8px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem;" />
           <div style="display:flex; gap:8px;">
-            <input type="text" placeholder="MM/YY" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem;" />
+            <input type="text" placeholder="MM/YY" maxlength="5" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem;" />
             <input type="password" placeholder="CVV" maxlength="3" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem;" />
           </div>
         </div>
@@ -722,13 +750,17 @@ async function renderCheckoutPage() {
     e.preventDefault();
     const btn = document.getElementById('confirm-pay-btn');
     const selectedPayOption = document.querySelector('input[name="pay-mode"]:checked').value;
-    const phoneNum = document.getElementById('cust-phone').value;
+    const phoneNum = document.getElementById('cust-phone').value.trim();
+
+    if (!/^[0-9]{10}$/.test(phoneNum)) {
+      alert("Please enter a valid 10-digit mobile number.");
+      return;
+    }
 
     btn.disabled = true;
     btn.innerText = "Processing Order...";
 
     try {
-      // Auto-save phone to user profile as well
       await setDoc(doc(db, "users", currentUser.uid), { phone: phoneNum, email: currentUser.email, updatedAt: new Date() }, { merge: true });
 
       const orderPayload = {
@@ -756,7 +788,7 @@ async function renderCheckoutPage() {
       
       setTimeout(() => {
         location.hash = 'order-confirmation';
-      }, 1000);
+      }, 800);
 
     } catch (err) {
       alert("Error saving order: " + err.message);
@@ -820,11 +852,10 @@ function renderAuthPage() {
 // USER DASHBOARD / PROFILE PAGE WITH PHONE NUMBER EDIT & SAVE
 async function renderUserDashboardPage() {
   if (!currentUser) { location.hash = 'auth'; return; }
-  const isAdmin = currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = currentUser.email && ADMIN_EMAIL && currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   const userName = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'User');
   const userInitial = userName[0].toUpperCase();
 
-  // Load User Data (Phone Number) from Firestore
   let savedPhone = 'Not Added';
   try {
     const userDocSnap = await getDoc(doc(db, "users", currentUser.uid));
@@ -841,10 +872,10 @@ async function renderUserDashboardPage() {
       <!-- Profile Header Card -->
       <div class="profile-card" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
         <div style="display: flex; align-items: center; gap: 16px;">
-          <div class="profile-avatar">${userInitial}</div>
+          <div class="profile-avatar">${escapeHtml(userInitial)}</div>
           <div>
-            <h2 style="font-size: 1.25rem; font-weight: 700; color: #212121;">Hello, ${userName}</h2>
-            <p style="color: #666; font-size: 0.88rem; font-weight: 500;">${currentUser.email}</p>
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: #212121;">Hello, ${escapeHtml(userName)}</h2>
+            <p style="color: #666; font-size: 0.88rem; font-weight: 500;">${escapeHtml(currentUser.email)}</p>
           </div>
         </div>
         ${isAdmin ? `<span class="status-badge" style="background: #e3f2fd; color: #1976d2;">Admin Account</span>` : `<span class="status-badge" style="background: #e8f5e9; color: #2e7d32;">Verified Customer</span>`}
@@ -861,11 +892,11 @@ async function renderUserDashboardPage() {
           <div style="display: flex; flex-direction: column; gap: 14px;">
             <div>
               <div class="profile-label">Full Name</div>
-              <div class="profile-value">${userName}</div>
+              <div class="profile-value">${escapeHtml(userName)}</div>
             </div>
             <div>
               <div class="profile-label">Email Address</div>
-              <div class="profile-value">${currentUser.email}</div>
+              <div class="profile-value">${escapeHtml(currentUser.email)}</div>
             </div>
             
             <!-- Dynamic Phone Number Field & Inline Editor -->
@@ -877,12 +908,12 @@ async function renderUserDashboardPage() {
               
               <div id="phone-display-view" class="profile-value" style="display:flex; align-items:center; gap:6px;">
                 <span>${VECTOR_ICONS.phone}</span>
-                <span id="current-phone-val">${savedPhone}</span>
+                <span id="current-phone-val">${escapeHtml(savedPhone)}</span>
               </div>
 
               <div id="phone-edit-view" style="display:none; margin-top:6px;">
                 <div style="display:flex; gap:6px;">
-                  <input type="tel" id="user-phone-input" placeholder="Enter 10-digit number" pattern="[0-9]{10}" value="${savedPhone !== 'Not Added' ? savedPhone : ''}" style="flex:1; padding:6px 9px; border:1px solid #2874f0; border-radius:4px; font-size:0.85rem;" />
+                  <input type="tel" id="user-phone-input" placeholder="Enter 10-digit number" pattern="[0-9]{10}" value="${savedPhone !== 'Not Added' ? escapeHtml(savedPhone) : ''}" style="flex:1; padding:6px 9px; border:1px solid #2874f0; border-radius:4px; font-size:0.85rem;" />
                   <button onclick="saveUserPhoneNumber()" style="padding:6px 12px; background:#2874f0; color:#fff; border:none; border-radius:4px; font-weight:700; font-size:0.8rem; cursor:pointer;">Save</button>
                   <button onclick="togglePhoneEdit(false)" style="padding:6px 10px; background:#f0f0f0; color:#333; border:none; border-radius:4px; font-weight:600; font-size:0.8rem; cursor:pointer;">Cancel</button>
                 </div>
@@ -891,7 +922,7 @@ async function renderUserDashboardPage() {
 
             <div>
               <div class="profile-label">Account UID</div>
-              <div class="profile-value" style="font-size:0.75rem; color:#666; font-family:monospace;">${currentUser.uid}</div>
+              <div class="profile-value" style="font-size:0.75rem; color:#666; font-family:monospace;">${escapeHtml(currentUser.uid)}</div>
             </div>
           </div>
         </div>
@@ -939,7 +970,7 @@ async function renderUserDashboardPage() {
         updatedAt: new Date()
       }, { merge: true });
 
-      document.getElementById('current-phone-val').innerText = phoneVal;
+      document.getElementById('current-phone-val').innerText = escapeHtml(phoneVal);
       togglePhoneEdit(false);
       alert("Phone number updated successfully!");
     } catch(err) {
@@ -949,7 +980,6 @@ async function renderUserDashboardPage() {
 
   document.getElementById('so-btn').onclick = () => signOut(auth).then(() => location.hash = 'auth');
 
-  // Load User Recent Orders
   fetchUserOrders(currentUser.email);
 }
 
@@ -970,16 +1000,18 @@ async function fetchUserOrders(userEmail) {
     container.innerHTML = snap.docs.slice(0, 5).map(docSnap => {
       const o = docSnap.data();
       const statusColor = o.status === 'Accepted' ? '#388e3c' : o.status === 'Rejected' ? '#d32f2f' : '#f57c00';
+      const itemNames = o.items ? o.items.map(i => escapeHtml(i.title)).join(', ') : 'Product';
+
       return `
         <div style="border-bottom: 1px solid #f0f0f0; padding: 10px 0;">
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
             <span style="font-weight: 700; color: #212121;">Order Total: ₹${o.totalAmount}</span>
-            <span style="font-weight: 700; color: ${statusColor}; background: ${statusColor}15; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">${o.status || 'Pending'}</span>
+            <span style="font-weight: 700; color: ${statusColor}; background: ${statusColor}15; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">${escapeHtml(o.status || 'Pending')}</span>
           </div>
           <div style="font-size: 0.8rem; color: #666; margin-top: 4px;">
-            Items: ${o.items ? o.items.map(i => i.title).join(', ') : 'Product'}
+            Items: ${itemNames}
           </div>
-          ${o.customerPhone ? `<div style="font-size: 0.78rem; color: #878787; margin-top: 2px;">Phone: ${o.customerPhone}</div>` : ''}
+          ${o.customerPhone ? `<div style="font-size: 0.78rem; color: #878787; margin-top: 2px;">Phone: ${escapeHtml(o.customerPhone)}</div>` : ''}
         </div>
       `;
     }).join('');
@@ -1011,17 +1043,19 @@ async function fetchProductsGrid(container, searchQuery = '', categoryFilter = '
       if (categoryFilter && p.category !== categoryFilter) return;
 
       matchFound = true;
+      const cleanImg = p.imageUrl ? escapeHtml(p.imageUrl) : fallbackProductImg;
+
       container.innerHTML += `
         <div class="product-card" onclick="location.hash='pdp?id=${docSnap.id}'">
-          <img src="${p.imageUrl || fallbackProductImg}" 
+          <img src="${cleanImg}" 
                onerror="this.onerror=null; this.src='${fallbackProductImg}';" 
                class="product-card-img"/>
           <div>
-            <div class="product-card-title">${p.title}</div>
+            <div class="product-card-title">${escapeHtml(p.title)}</div>
             <div class="rating-badge">4.5 ${VECTOR_ICONS.star}</div>
             <div class="price-row">
               <span class="main-price">₹${p.price}</span>
-              ${p.tag ? `<span class="offer-tag">${p.tag}</span>` : ''}
+              ${p.tag ? `<span class="offer-tag">${escapeHtml(p.tag)}</span>` : ''}
             </div>
           </div>
         </div>
