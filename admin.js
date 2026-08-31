@@ -80,12 +80,12 @@ async function renderAdminUI() {
       </div>
     </div>
 
-    <!-- 3. Product Manager Form (WITH SIZE / VARIANT INPUT) -->
+    <!-- 3. Product Manager Form (S to 7XL Checkboxes) -->
     <div class="card">
       <div class="card-title" id="prod-form-heading">4. Publish / Edit Product</div>
       <form id="seller-add-form">
         <div class="form-grid">
-          <div class="form-group"><label>Title</label><input type="text" id="p-title" required placeholder="Headphones"/></div>
+          <div class="form-group"><label>Title</label><input type="text" id="p-title" required placeholder="T-Shirt / Shoes"/></div>
           <div class="form-group">
             <label>Select Category</label>
             <select id="p-category">
@@ -95,14 +95,25 @@ async function renderAdminUI() {
           <div class="form-group"><label>Price (₹)</label><input type="number" step="0.01" id="p-price" required placeholder="499"/></div>
           <div class="form-group"><label>Offer Tag</label><input type="text" id="p-tag" placeholder="Hot Deal"/></div>
           
-          <!-- Size Field Added -->
-          <div class="form-group">
-            <label style="color:#2874f0; font-weight:700;">Size / Variant (e.g. S, M, L or 64GB)</label>
-            <input type="text" id="p-size" placeholder="Enter sizes separated by comma"/>
+          <!-- MULTI SIZE SELECTION BOX (S to 7XL) -->
+          <div class="form-group full" style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
+            <label style="color:#2874f0; font-weight:700; margin-bottom:8px; display:block;">Select Available Sizes (S to 7XL):</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;" id="size-checkbox-group">
+              <label style="cursor:pointer; font-weight:600;"><input type="checkbox" name="p-size-opt" value="S"> S</label>
+              <label style="cursor:pointer; font-weight:600;"><input type="checkbox" name="p-size-opt" value="M"> M</label>
+              <label style="cursor:pointer; font-weight:600;"><input type="checkbox" name="p-size-opt" value="L"> L</label>
+              <label style="cursor:pointer; font-weight:600;"><input type="checkbox" name="p-size-opt" value="XL"> XL</label>
+              <label style="cursor:pointer; font-weight:600;"><input type="checkbox" name="p-size-opt" value="2XL"> 2XL</label>
+              <label style="cursor:pointer; font-weight:600;"><input type="checkbox" name="p-size-opt" value="3XL"> 3XL</label>
+              <label style="cursor:pointer; font-weight:600;"><input type="checkbox" name="p-size-opt" value="4XL"> 4XL</label>
+              <label style="cursor:pointer; font-weight:600;"><input type="checkbox" name="p-size-opt" value="5XL"> 5XL</label>
+              <label style="cursor:pointer; font-weight:600;"><input type="checkbox" name="p-size-opt" value="6XL"> 6XL</label>
+              <label style="cursor:pointer; font-weight:600;"><input type="checkbox" name="p-size-opt" value="7XL"> 7XL</label>
+            </div>
           </div>
 
           <div class="form-group full"><label>Image URL</label><input type="url" id="p-image" required placeholder="https://..."/></div>
-          <div class="form-group full"><label>Description</label><textarea id="p-desc" rows="3" required placeholder="Product specifications..."></textarea></div>
+          <div class="form-group full"><label>Description</label><textarea id="p-desc" rows="3" required placeholder="Product details..."></textarea></div>
         </div>
         <div style="display:flex; gap:10px; margin-top:12px;">
           <button type="submit" id="prod-submit-btn" class="btn btn-orange" style="flex:1;">PUBLISH PRODUCT</button>
@@ -111,13 +122,13 @@ async function renderAdminUI() {
       </form>
     </div>
 
-    <!-- 4. Customer Order Management -->
+    <!-- 4. Live Customer Orders -->
     <div class="card">
       <div class="card-title">5. Live Customer Orders</div>
       <div id="admin-orders-list" style="overflow-x: auto;">Loading Orders...</div>
     </div>
 
-    <!-- 5. Seller Customer Lead Reports & Commission Approvals -->
+    <!-- 5. Sub-Admin / Seller Customer Reports -->
     <div class="card">
       <div class="card-title" style="color:#2e7d32;">6. Sub-Admin / Seller Customer Reports & Commission Approval</div>
       <div id="admin-seller-reports-list" style="overflow-x: auto;">Loading Seller Reports...</div>
@@ -151,7 +162,7 @@ async function renderAdminUI() {
   loadProductsTable();
 }
 
-// Event Bindings
+// Bind Events Logic
 function bindEvents() {
   const paymentForm = document.getElementById('admin-payment-form');
   if (paymentForm) {
@@ -203,18 +214,23 @@ function bindEvents() {
     };
   }
 
+  // Product Add / Update Handler
   const prodForm = document.getElementById('seller-add-form');
   if (prodForm) {
     prodForm.onsubmit = async (e) => {
       e.preventDefault();
-      const sizeInput = document.getElementById('p-size');
       
+      // Selected Size Checkboxes Extraction
+      const selectedSizes = Array.from(document.querySelectorAll('input[name="p-size-opt"]:checked'))
+                                 .map(cb => cb.value)
+                                 .join(',');
+
       const payload = {
         title: document.getElementById('p-title').value,
         category: document.getElementById('p-category').value,
         price: parseFloat(document.getElementById('p-price').value),
         tag: document.getElementById('p-tag').value || '',
-        size: sizeInput ? sizeInput.value.trim() : '',
+        size: selectedSizes, // Stores comma-separated string e.g. "S,M,XL,7XL"
         imageUrl: document.getElementById('p-image').value,
         description: document.getElementById('p-desc').value,
         updatedAt: new Date()
@@ -223,11 +239,11 @@ function bindEvents() {
       try {
         if (editingProductId) {
           await updateDoc(doc(db, "products", editingProductId), payload);
-          alert("Product Updated!");
+          alert("Product Updated Successfully!");
         } else {
           payload.createdAt = new Date();
           await addDoc(collection(db, "products"), payload);
-          alert("Product Published!");
+          alert("Product Published Successfully!");
         }
         window.resetProductForm();
         loadProductsTable();
@@ -239,11 +255,15 @@ function bindEvents() {
   }
 }
 
-// Global Actions & Helpers
+// Global Helper Functions
 window.resetProductForm = () => {
   editingProductId = null;
   const form = document.getElementById('seller-add-form');
   if (form) form.reset();
+  
+  // Uncheck all size checkboxes
+  document.querySelectorAll('input[name="p-size-opt"]').forEach(cb => cb.checked = false);
+
   document.getElementById('prod-form-heading').innerText = "4. Publish / Edit Product";
   document.getElementById('prod-submit-btn').innerText = "PUBLISH PRODUCT";
   document.getElementById('cancel-edit-btn').style.display = "none";
@@ -264,12 +284,14 @@ window.startEditProduct = async (id) => {
     document.getElementById('p-category').value = data.category || 'General';
     document.getElementById('p-price').value = data.price || 0;
     document.getElementById('p-tag').value = data.tag || '';
-    
-    const sizeInput = document.getElementById('p-size');
-    if (sizeInput) sizeInput.value = data.size || '';
-
     document.getElementById('p-image').value = data.imageUrl || '';
     document.getElementById('p-desc').value = data.description || '';
+
+    // Auto-check saved sizes
+    const existingSizes = (data.size || '').split(',');
+    document.querySelectorAll('input[name="p-size-opt"]').forEach(cb => {
+      cb.checked = existingSizes.includes(cb.value);
+    });
 
     window.scrollTo({ top: document.getElementById('seller-add-form').offsetTop - 20, behavior: 'smooth' });
   } catch(err) { alert("Error loading product: " + err.message); }
@@ -568,7 +590,7 @@ async function loadBannersTable() {
   } catch(e) {}
 }
 
-// Updated Products Table displaying Size Info
+// Live Products Table
 async function loadProductsTable() {
   const container = document.getElementById('admin-items-list');
   if (!container) return;
@@ -577,7 +599,7 @@ async function loadProductsTable() {
     if (snap.empty) { container.innerHTML = '<p style="color:#888;">No products available.</p>'; return; }
     container.innerHTML = `
       <table>
-        <thead><tr><th>Image</th><th>Title</th><th>Size/Variant</th><th>Price</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Image</th><th>Title</th><th>Selected Sizes</th><th>Price</th><th>Actions</th></tr></thead>
         <tbody>
           ${snap.docs.map(d => {
             const p = d.data();
@@ -585,7 +607,7 @@ async function loadProductsTable() {
               <tr>
                 <td><img src="${p.imageUrl}" style="width:36px; height:36px; object-fit:contain;"/></td>
                 <td><b>${p.title}</b></td>
-                <td><span style="background:#e8f0fe; color:#1a73e8; padding:2px 6px; border-radius:3px; font-weight:600;">${p.size || 'N/A'}</span></td>
+                <td><span style="background:#e8f0fe; color:#1a73e8; padding:2px 6px; border-radius:3px; font-weight:600; font-size:12px;">${p.size || 'No Size'}</span></td>
                 <td>₹${p.price}</td>
                 <td>
                   <button class="btn btn-primary" onclick="startEditProduct('${d.id}')">Edit</button>
