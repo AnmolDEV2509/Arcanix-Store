@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller / Sub-Admin Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f4f6f9; color: #333; padding: 20px; }
+    .container { max-width: 900px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    h1, h2 { font-size: 20px; color: #1e293b; }
+    .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 14px; }
+    button { background: #2563eb; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; width: 100%; font-size: 15px; }
+    button:hover { background: #1d4ed8; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+    th { background: #f8fafc; font-weight: 600; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .badge-pending { background: #fef3c7; color: #d97706; }
+    .badge-approved { background: #dcfce7; color: #15803d; }
+    .badge-rejected { background: #fee2e2; color: #b91c1c; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Top Header -->
+  <header>
+    <h1>Seller Portal</h1>
+    <div id="userInfo" class="hidden">
+      <span id="sellerEmailDisplay"></span>
+      <button onclick="logoutSeller()" style="width: auto; margin-left: 10px; background: #ef4444;">Logout</button>
+    </div>
+  </header>
+
+  <!-- Login Section -->
+  <div id="loginCard" class="card">
+    <h2>Seller Login</h2>
+    <form id="sellerLoginForm" style="margin-top: 15px;">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="sellerEmail" required placeholder="seller@domain.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="sellerPassword" required>
+      </div>
+      <button type="submit">Login to Dashboard</button>
+    </form>
+  </div>
+
+  <!-- Seller Dashboard (Hidden by default) -->
+  <div id="dashboardSection" class="hidden">
+    
+    <!-- Report/Connect Customer Form -->
+    <div class="card">
+      <h2>Report New Customer Lead to Admin</h2>
+      <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Customer details submit karein jisse commission aapke account me credit ho sake.</p>
+
+      <form id="customerReportForm">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label>Customer Name</label>
+            <input type="text" id="custName" required placeholder="Aman Sharma">
+          </div>
+          <div class="form-group">
+            <label>Customer Mobile Number</label>
+            <input type="tel" id="custPhone" required placeholder="9876543210">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label>Customer Email (Optional)</label>
+            <input type="email" id="custEmail" placeholder="customer@gmail.com">
+          </div>
+          <div class="form-group">
+            <label>Product Requested</label>
+            <select id="productSelect" required>
+              <option value="">Select Product...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" id="custQuantity" value="1" min="1" required>
+        </div>
+
+        <div class="form-group">
+          <label>Notes / Requirements for Admin</label>
+          <textarea id="custNotes" rows="3" placeholder="Customer exact requirement or payment preference..."></textarea>
+        </div>
+
+        <button type="submit">Submit Lead to Admin</button>
+      </form>
+    </div>
+
+    <!-- Reported Customers Status Table -->
+    <div class="card">
+      <h2>Submitted Customer Reports & Commission Status</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Product & Qty</th>
+            <th>Status</th>
+            <th>Commission</th>
+          </tr>
+        </thead>
+        <tbody id="reportsTableBody">
+          <tr><td colspan="5" style="text-align: center;">Loading status...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- Firebase Modular Scripts -->
+<script type="module" src="seller.js"></script>
+</body>
+</html>
