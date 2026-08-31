@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
   onAuthStateChanged, 
   signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -9,6 +10,8 @@ import {
   getFirestore, 
   collection, 
   addDoc, 
+  setDoc,
+  doc,
   getDocs, 
   query, 
   where, 
@@ -66,24 +69,52 @@ document.getElementById("sellerLoginForm").addEventListener("submit", async (e) 
   }
 });
 
+// 2. NEW: Seller Account Registration Handler
+document.getElementById("sellerRegisterForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = document.getElementById("regName").value.trim();
+  const email = document.getElementById("regEmail").value.trim();
+  const phone = document.getElementById("regPhone").value.trim();
+  const password = document.getElementById("regPassword").value;
+
+  try {
+    // Firebase Auth user create karein
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Firestore `sellers` collection me seller details save karein
+    await setDoc(doc(db, "sellers", user.uid), {
+      sellerId: user.uid,
+      name: name,
+      email: email,
+      phone: phone,
+      createdAt: serverTimestamp()
+    });
+
+    alert("Seller Account Created Successfully!");
+  } catch (error) {
+    alert("Registration Failed: " + error.message);
+  }
+});
+
 // Logout Function
 window.logoutSeller = () => {
   signOut(auth);
 };
 
-// 2. Fetch Active Products for Select Dropdown
+// 3. Fetch Active Products for Select Dropdown
 async function loadProducts() {
   const select = document.getElementById("productSelect");
   select.innerHTML = '<option value="">Select Product...</option>';
 
   try {
     const querySnapshot = await getDocs(collection(db, "products"));
-    querySnapshot.forEach((doc) => {
-      const p = doc.data();
+    querySnapshot.forEach((docSnap) => {
+      const p = docSnap.data();
       const opt = document.createElement("option");
-      opt.value = p.name;
-      opt.dataset.id = doc.id;
-      opt.textContent = `${p.name} - ₹${p.price || 0}`;
+      opt.value = p.title || p.name;
+      opt.dataset.id = docSnap.id;
+      opt.textContent = `${p.title || p.name} - ₹${p.price || 0}`;
       select.appendChild(opt);
     });
   } catch (err) {
@@ -91,7 +122,7 @@ async function loadProducts() {
   }
 }
 
-// 3. Submit Customer Lead / Report to Admin
+// 4. Submit Customer Lead / Report to Admin
 document.getElementById("customerReportForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!currentSeller) return;
@@ -121,7 +152,7 @@ document.getElementById("customerReportForm").addEventListener("submit", async (
   }
 });
 
-// 4. Load Reported Customers for Current Seller
+// 5. Load Reported Customers for Current Seller
 async function loadSellerReports(sellerId) {
   const tbody = document.getElementById("reportsTableBody");
   tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading...</td></tr>';
