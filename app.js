@@ -234,7 +234,6 @@ window.toggleDrawer = function(open) {
 };
 
 function navigate() {
-  // Clear any existing active banner timers to prevent memory leaks
   if (bannerTimer) {
     clearInterval(bannerTimer);
     bannerTimer = null;
