@@ -644,7 +644,7 @@ async function renderCheckoutPage() {
   // Fetch saved phone number from User document
   let savedPhone = '';
   try {
-    const userDocSnap = await getDoc(doc(doc(db, "users", currentUser.uid)));
+    const userDocSnap = await getDoc(doc(db, "users", currentUser.uid));
     if (userDocSnap.exists() && userDocSnap.data().phone) {
       savedPhone = userDocSnap.data().phone;
     }
