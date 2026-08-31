@@ -295,34 +295,34 @@ function updateCartBadge() {
   }
 }
 
-// Cart Handlers
-window.addToCart = (id, title, price, image) => {
+// Cart Handlers with Size support
+window.addToCart = (id, title, price, image, size = 'Standard') => {
   if (!currentUser) {
     alert("Please login first to add items to your cart!");
     location.hash = 'auth';
     return false;
   }
 
-  const existingItem = window.cart.find(item => item.id === id);
+  const existingItem = window.cart.find(item => item.id === id && item.size === size);
   if (existingItem) {
     existingItem.quantity = (existingItem.quantity || 1) + 1;
   } else {
-    window.cart.push({ id, title, price, image, quantity: 1 });
+    window.cart.push({ id, title, price, image, size, quantity: 1 });
   }
   localStorage.setItem('arcanix_cart', JSON.stringify(window.cart));
   updateCartBadge();
-  alert(`"${title}" added to Cart!`);
+  alert(`"${title}" (Size: ${size}) added to Cart!`);
   return true;
 };
 
 // Buy Now direct flow
-window.buyNow = (id, title, price, image) => {
+window.buyNow = (id, title, price, image, size = 'Standard') => {
   if (!currentUser) {
     alert("Please login to proceed with your purchase!");
     location.hash = 'auth';
     return;
   }
-  addToCart(id, title, price, image);
+  addToCart(id, title, price, image, size);
   location.hash = 'checkout';
 };
 
@@ -478,7 +478,7 @@ async function renderCategoryProductsPage(params) {
   fetchProductsGrid(document.getElementById('plp-grid'), '', categoryName);
 }
 
-// PRODUCT DETAIL PAGE
+// PRODUCT DETAIL PAGE WITH SIZE SELECTION DROPDOWN
 async function renderProductDetailPage(params) {
   const id = params.get('id');
   if (!id) return;
@@ -510,6 +510,18 @@ async function renderProductDetailPage(params) {
           <h1 style="font-size: 1.25rem; font-weight: 500; margin-bottom: 8px; color:#212121; line-height:1.4;">${cleanTitle}</h1>
           <div class="rating-badge">4.5 ${VECTOR_ICONS.star}</div>
           <div style="font-size:0.85rem; color:#878787; font-weight:600; margin-bottom:14px; margin-top: 6px;">Category: ${escapeHtml(p.category || 'General')}</div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display:block; font-size:0.85rem; font-weight:700; color:#333; margin-bottom:6px;">Select Size:</label>
+            <select id="pdp-size-select" style="width: 100%; max-width: 220px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; outline: none; cursor: pointer;">
+              <option value="S">S - Small</option>
+              <option value="M" selected>M - Medium</option>
+              <option value="L">L - Large</option>
+              <option value="XL">XL - Extra Large</option>
+              <option value="XXL">XXL - Double Large</option>
+            </select>
+          </div>
+
           <div style="margin-bottom: 20px; border-bottom:1px solid #f0f0f0; padding-bottom:14px;">
             <span style="font-size: 1.6rem; font-weight:800; color:#212121;">₹${p.price}</span>
             ${p.tag ? `<span style="color:#388e3c; font-size:0.85rem; font-weight:700; margin-left:12px;">${escapeHtml(p.tag)}</span>` : ''}
@@ -520,8 +532,15 @@ async function renderProductDetailPage(params) {
       </div>
     `;
 
-    document.getElementById('pdp-add-cart').onclick = () => addToCart(id, p.title, p.price, p.imageUrl);
-    document.getElementById('pdp-buy-now').onclick = () => buyNow(id, p.title, p.price, p.imageUrl);
+    document.getElementById('pdp-add-cart').onclick = () => {
+      const selectedSize = document.getElementById('pdp-size-select').value;
+      addToCart(id, p.title, p.price, p.imageUrl, selectedSize);
+    };
+
+    document.getElementById('pdp-buy-now').onclick = () => {
+      const selectedSize = document.getElementById('pdp-size-select').value;
+      buyNow(id, p.title, p.price, p.imageUrl, selectedSize);
+    };
 
   } catch (err) {
     appContainer.innerHTML = `<p style="padding:20px; background:#fff;">Error loading product details.</p>`;
@@ -540,7 +559,7 @@ function renderSearchResultsPage(params) {
   fetchProductsGrid(document.getElementById('search-grid'), queryVal);
 }
 
-// CART PAGE
+// CART PAGE DISPLAYING SIZE
 function renderCartPage() {
   if (window.cart.length === 0) {
     appContainer.innerHTML = `<div style="text-align: center; padding: 50px 16px; background:#fff; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);"><h2>Your Shopping Cart is Empty!</h2><br/><a href="#home" style="display:inline-block; padding:12px 28px; background:#2874f0; color:#fff; text-decoration:none; border-radius:2px; font-weight:700; font-size:0.9rem;">Shop Now</a></div>`;
@@ -556,7 +575,8 @@ function renderCartPage() {
           <div style="display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid #f0f0f0; align-items: center;">
             <img src="${escapeHtml(item.image)}" style="width: 65px; height: 65px; object-fit: contain;"/>
             <div style="flex: 1;">
-              <h4 style="font-size: 0.88rem; font-weight:500; margin-bottom: 6px; color:#212121;">${escapeHtml(item.title)}</h4>
+              <h4 style="font-size: 0.88rem; font-weight:500; margin-bottom: 4px; color:#212121;">${escapeHtml(item.title)}</h4>
+              <div style="font-size: 0.78rem; font-weight:600; color:#555; margin-bottom: 4px;">Size: <span style="color:#2874f0;">${escapeHtml(item.size || 'Standard')}</span></div>
               <div><span style="font-weight:700; font-size: 1rem; color:#212121;">₹${item.price}</span></div>
               <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
                 <button class="qty-btn" onclick="changeCartQty(${idx}, -1)">-</button>
@@ -624,7 +644,7 @@ async function renderCheckoutPage() {
   // Fetch saved phone number from User document
   let savedPhone = '';
   try {
-    const userDocSnap = await getDoc(doc(db, "users", currentUser.uid));
+    const userDocSnap = await getDoc(doc(doc(db, "users", currentUser.uid)));
     if (userDocSnap.exists() && userDocSnap.data().phone) {
       savedPhone = userDocSnap.data().phone;
     }
@@ -999,7 +1019,7 @@ async function fetchUserOrders(userEmail) {
     container.innerHTML = snap.docs.slice(0, 5).map(docSnap => {
       const o = docSnap.data();
       const statusColor = o.status === 'Accepted' ? '#388e3c' : o.status === 'Rejected' ? '#d32f2f' : '#f57c00';
-      const itemNames = o.items ? o.items.map(i => escapeHtml(i.title)).join(', ') : 'Product';
+      const itemNames = o.items ? o.items.map(i => `${escapeHtml(i.title)} (${escapeHtml(i.size || 'Std')})`).join(', ') : 'Product';
 
       return `
         <div style="border-bottom: 1px solid #f0f0f0; padding: 10px 0;">
