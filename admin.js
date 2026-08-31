@@ -110,7 +110,13 @@ async function renderAdminUI() {
       <div id="admin-orders-list" style="overflow-x: auto;">Loading Orders...</div>
     </div>
 
-    <!-- 5. Categories & Banners Table -->
+    <!-- 5. Seller Customer Lead Reports & Commission Approvals (NEW SELLER SYSTEM MERGED) -->
+    <div class="card">
+      <div class="card-title" style="color:#2e7d32;">6. Sub-Admin / Seller Customer Reports & Commission Approval</div>
+      <div id="admin-seller-reports-list" style="overflow-x: auto;">Loading Seller Reports...</div>
+    </div>
+
+    <!-- 6. Categories & Banners Table -->
     <div style="display: flex; flex-wrap: wrap; gap: 16px;">
       <div class="card" style="flex: 1 1 300px;">
         <div class="card-title">Manage Categories</div>
@@ -122,7 +128,7 @@ async function renderAdminUI() {
       </div>
     </div>
 
-    <!-- 6. Live Products Table -->
+    <!-- 7. Live Products Table -->
     <div class="card">
       <div class="card-title">Manage Live Products</div>
       <div id="admin-items-list" style="overflow-x: auto;"></div>
@@ -132,6 +138,7 @@ async function renderAdminUI() {
   bindEvents();
   await loadCategoryDropdown();
   loadOrders();
+  loadSellerReportsForAdmin();
   loadCategoriesTable();
   loadBannersTable();
   loadProductsTable();
@@ -250,6 +257,7 @@ window.deleteItem = async (colName, id) => {
       if (colName === 'categories') { loadCategoriesTable(); await loadCategoryDropdown(); }
       if (colName === 'banners') loadBannersTable();
       if (colName === 'products') loadProductsTable();
+      if (colName === 'customer_reports') loadSellerReportsForAdmin();
     } catch(err) { alert("Error deleting: " + err.message); }
   }
 };
@@ -261,6 +269,100 @@ window.updateOrderStatus = async (orderId, newStatus) => {
     loadOrders();
   } catch(err) { alert("Error updating status: " + err.message); }
 };
+
+// ====================================================
+// NEW SELLER REPORT & COMMISSION MANAGEMENT (ADMIN CONTROL)
+// ====================================================
+window.updateSellerReport = async (reportId) => {
+  const statusSelect = document.getElementById(`report-status-${reportId}`);
+  const commissionInput = document.getElementById(`report-comm-${reportId}`);
+
+  const newStatus = statusSelect.value;
+  const commissionAmount = parseFloat(commissionInput.value) || 0;
+
+  try {
+    await updateDoc(doc(db, "customer_reports", reportId), {
+      status: newStatus,
+      commissionAmount: commissionAmount,
+      updatedAt: new Date()
+    });
+    alert(`Seller Lead Status set to "${newStatus}" with Commission ₹${commissionAmount}!`);
+    loadSellerReportsForAdmin();
+  } catch (err) {
+    alert("Error updating report: " + err.message);
+  }
+};
+
+async function loadSellerReportsForAdmin() {
+  const container = document.getElementById('admin-seller-reports-list');
+  try {
+    const q = query(collection(db, "customer_reports"), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      container.innerHTML = '<p style="color:#666;">No seller customer leads submitted yet.</p>';
+      return;
+    }
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Seller Info</th>
+            <th>Customer Request</th>
+            <th>Product & Qty</th>
+            <th>Notes</th>
+            <th>Status & Commission</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${snap.docs.map(d => {
+            const r = d.data();
+            const status = r.status || 'pending';
+            const comm = r.commissionAmount || 0;
+
+            return `
+              <tr>
+                <td>
+                  <small style="color:#2874f0; font-weight:bold;">${r.sellerEmail || 'N/A'}</small><br/>
+                  <small style="color:#777;">ID: ${r.sellerId ? r.sellerId.substring(0, 6) : ''}...</small>
+                </td>
+                <td>
+                  <b>${r.customerName || 'N/A'}</b><br/>
+                  <small style="color:#333;">📞 ${r.customerPhone || 'N/A'}</small><br/>
+                  <small style="color:#777;">${r.customerEmail || ''}</small>
+                </td>
+                <td>
+                  <b>${r.productName || 'N/A'}</b><br/>
+                  <small>Qty: <b>${r.quantity || 1}</b></small>
+                </td>
+                <td><small style="color:#555;">${r.notes || 'No notes'}</small></td>
+                <td>
+                  <select id="report-status-${d.id}" style="padding: 4px; margin-bottom: 4px;">
+                    <option value="pending" ${status === 'pending' ? 'selected' : ''}>Pending</option>
+                    <option value="approved" ${status === 'approved' ? 'selected' : ''}>Approved</option>
+                    <option value="rejected" ${status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                  </select>
+                  <div style="display:flex; align-items:center; gap:2px;">
+                    <span style="font-size:12px;">₹</span>
+                    <input type="number" id="report-comm-${d.id}" value="${comm}" placeholder="Commission" style="width: 80px; padding: 3px; font-size: 12px;"/>
+                  </div>
+                </td>
+                <td>
+                  <button class="btn btn-success" style="padding: 4px 8px; font-size: 11px; margin-bottom: 4px; width: 100%;" onclick="updateSellerReport('${d.id}')">Save</button>
+                  <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px; width: 100%;" onclick="deleteItem('customer_reports', '${d.id}')">Delete</button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (err) {
+    container.innerHTML = `<p style="color:#d32f2f;">Failed to load seller reports: ${err.message}</p>`;
+  }
+}
 
 // ====================================================
 // WHATSAPP FULL DETAILED RECEIPT GENERATOR FUNCTION
@@ -278,7 +380,6 @@ window.sendWhatsAppNotice = (encodedOrderData) => {
     let formattedPhone = phone.toString().replace(/\D/g, '');
     if (formattedPhone.length === 10) formattedPhone = '91' + formattedPhone;
 
-    // Detailed item-by-item breakdown with quantity & price calculations
     const itemsFormatted = (orderData.items || []).map((item, idx) => {
       const qty = item.quantity || 1;
       const price = item.price || 0;
@@ -360,7 +461,6 @@ async function loadOrders() {
             const status = o.status || 'Pending';
             const customerPhone = o.customerPhone || o.phone || 'N/A';
 
-            // Complete Order Payload for WhatsApp Template
             const orderPayload = {
               id: doc.id,
               customerName: o.customerName || 'N/A',
