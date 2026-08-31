@@ -18,7 +18,7 @@ import {
   serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Your Updated Firebase Configuration
+// Your Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDPIOo14SFduC4ePsgPv3NzWEIRTNUEH40",
   authDomain: "arcanix-store.firebaseapp.com",
@@ -69,7 +69,7 @@ document.getElementById("sellerLoginForm").addEventListener("submit", async (e) 
   }
 });
 
-// 2. NEW: Seller Account Registration Handler
+// 2. Seller Registration Handler
 document.getElementById("sellerRegisterForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = document.getElementById("regName").value.trim();
@@ -78,11 +78,9 @@ document.getElementById("sellerRegisterForm").addEventListener("submit", async (
   const password = document.getElementById("regPassword").value;
 
   try {
-    // Firebase Auth user create karein
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Firestore `sellers` collection me seller details save karein
     await setDoc(doc(db, "sellers", user.uid), {
       sellerId: user.uid,
       name: name,
@@ -102,19 +100,30 @@ window.logoutSeller = () => {
   signOut(auth);
 };
 
-// 3. Fetch Active Products for Select Dropdown
+// 3. Fetch Active Products for Select Dropdown (Fixed Undefined Bug)
 async function loadProducts() {
   const select = document.getElementById("productSelect");
   select.innerHTML = '<option value="">Select Product...</option>';
 
   try {
     const querySnapshot = await getDocs(collection(db, "products"));
+    
+    if (querySnapshot.empty) {
+      console.log("No products found in database.");
+      return;
+    }
+
     querySnapshot.forEach((docSnap) => {
       const p = docSnap.data();
+      
+      // Multi-property check to prevent 'undefined'
+      const productName = p.name || p.title || p.productName || p.product_name || "Unnamed Product";
+      const productPrice = p.price !== undefined ? p.price : (p.productPrice || 0);
+
       const opt = document.createElement("option");
-      opt.value = p.title || p.name;
+      opt.value = productName;
       opt.dataset.id = docSnap.id;
-      opt.textContent = `${p.title || p.name} - ₹${p.price || 0}`;
+      opt.textContent = `${productName} - ₹${productPrice}`;
       select.appendChild(opt);
     });
   } catch (err) {
