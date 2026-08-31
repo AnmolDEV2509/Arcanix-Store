@@ -80,7 +80,7 @@ async function renderAdminUI() {
       </div>
     </div>
 
-    <!-- 3. Product Manager Form -->
+    <!-- 3. Product Manager Form (WITH SIZE / VARIANT INPUT) -->
     <div class="card">
       <div class="card-title" id="prod-form-heading">4. Publish / Edit Product</div>
       <form id="seller-add-form">
@@ -94,11 +94,17 @@ async function renderAdminUI() {
           </div>
           <div class="form-group"><label>Price (₹)</label><input type="number" step="0.01" id="p-price" required placeholder="499"/></div>
           <div class="form-group"><label>Offer Tag</label><input type="text" id="p-tag" placeholder="Hot Deal"/></div>
-          <div class="form-group"><label>Size / Variant (Optional)</label><input type="text" id="p-size" placeholder="S, M, L, XL or 64GB"/></div>
+          
+          <!-- Size Field Added -->
+          <div class="form-group">
+            <label style="color:#2874f0; font-weight:700;">Size / Variant (e.g. S, M, L or 64GB)</label>
+            <input type="text" id="p-size" placeholder="Enter sizes separated by comma"/>
+          </div>
+
           <div class="form-group full"><label>Image URL</label><input type="url" id="p-image" required placeholder="https://..."/></div>
           <div class="form-group full"><label>Description</label><textarea id="p-desc" rows="3" required placeholder="Product specifications..."></textarea></div>
         </div>
-        <div style="display:flex; gap:10px; margin-top:8px;">
+        <div style="display:flex; gap:10px; margin-top:12px;">
           <button type="submit" id="prod-submit-btn" class="btn btn-orange" style="flex:1;">PUBLISH PRODUCT</button>
           <button type="button" id="cancel-edit-btn" class="btn btn-secondary" style="display:none;" onclick="resetProductForm()">CANCEL EDIT</button>
         </div>
@@ -562,6 +568,7 @@ async function loadBannersTable() {
   } catch(e) {}
 }
 
+// Updated Products Table displaying Size Info
 async function loadProductsTable() {
   const container = document.getElementById('admin-items-list');
   if (!container) return;
@@ -570,7 +577,7 @@ async function loadProductsTable() {
     if (snap.empty) { container.innerHTML = '<p style="color:#888;">No products available.</p>'; return; }
     container.innerHTML = `
       <table>
-        <thead><tr><th>Image</th><th>Title</th><th>Price</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Image</th><th>Title</th><th>Size/Variant</th><th>Price</th><th>Actions</th></tr></thead>
         <tbody>
           ${snap.docs.map(d => {
             const p = d.data();
@@ -578,6 +585,7 @@ async function loadProductsTable() {
               <tr>
                 <td><img src="${p.imageUrl}" style="width:36px; height:36px; object-fit:contain;"/></td>
                 <td><b>${p.title}</b></td>
+                <td><span style="background:#e8f0fe; color:#1a73e8; padding:2px 6px; border-radius:3px; font-weight:600;">${p.size || 'N/A'}</span></td>
                 <td>₹${p.price}</td>
                 <td>
                   <button class="btn btn-primary" onclick="startEditProduct('${d.id}')">Edit</button>
