@@ -10,7 +10,7 @@ const adminContainer = document.getElementById('admin-view');
 onAuthStateChanged(auth, async (user) => {
   if (user && user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
     await loadAdminPaymentSettings();
-    renderAdminUI();
+    await renderAdminUI();
   } else {
     adminContainer.innerHTML = `
       <div class="card" style="text-align:center; padding: 40px;">
@@ -94,10 +94,7 @@ async function renderAdminUI() {
           </div>
           <div class="form-group"><label>Price (₹)</label><input type="number" step="0.01" id="p-price" required placeholder="499"/></div>
           <div class="form-group"><label>Offer Tag</label><input type="text" id="p-tag" placeholder="Hot Deal"/></div>
-          
-          <!-- Size Slot Field -->
-          <div class="form-group"><label>Available Sizes</label><input type="text" id="p-size" placeholder="S, M, L, XL or Free Size"/></div>
-
+          <div class="form-group"><label>Size / Variant (Optional)</label><input type="text" id="p-size" placeholder="S, M, L, XL or 64GB"/></div>
           <div class="form-group full"><label>Image URL</label><input type="url" id="p-image" required placeholder="https://..."/></div>
           <div class="form-group full"><label>Description</label><textarea id="p-desc" rows="3" required placeholder="Product specifications..."></textarea></div>
         </div>
@@ -150,84 +147,97 @@ async function renderAdminUI() {
 
 // Event Bindings
 function bindEvents() {
-  // Save UPI Config
-  document.getElementById('admin-payment-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('qr-save-btn');
-    btn.disabled = true;
-    try {
-      const upiId = document.getElementById('qr-upi-id').value.trim();
-      const merchantName = document.getElementById('qr-merchant-name').value.trim();
-      await setDoc(doc(db, "settings", "payment"), { upiId, merchantName, updatedAt: new Date() });
-      adminUpiConfig = { upiId, merchantName };
-      alert("UPI Settings Saved!");
-    } catch(err) { alert("Error: " + err.message); }
-    finally { btn.disabled = false; }
-  };
-
-  // Add Category
-  document.getElementById('admin-cat-form').onsubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const name = document.getElementById('c-name').value.trim();
-      await addDoc(collection(db, "categories"), { name, createdAt: new Date() });
-      alert(`Category "${name}" added!`);
-      document.getElementById('admin-cat-form').reset();
-      await loadCategoryDropdown();
-      loadCategoriesTable();
-    } catch(err) { alert("Error: " + err.message); }
-  };
-
-  // Add Banner
-  document.getElementById('admin-banner-form').onsubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await addDoc(collection(db, "banners"), {
-        title: document.getElementById('b-title').value,
-        subtitle: document.getElementById('b-subtitle').value,
-        imageUrl: document.getElementById('b-image').value,
-        createdAt: new Date()
-      });
-      alert("Banner Added!");
-      document.getElementById('admin-banner-form').reset();
-      loadBannersTable();
-    } catch(err) { alert("Error: " + err.message); }
-  };
-
-  // Add / Edit Product
-  document.getElementById('seller-add-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const payload = {
-      title: document.getElementById('p-title').value,
-      category: document.getElementById('p-category').value,
-      price: parseFloat(document.getElementById('p-price').value),
-      tag: document.getElementById('p-tag').value || '',
-      size: document.getElementById('p-size').value.trim() || '',
-      imageUrl: document.getElementById('p-image').value,
-      description: document.getElementById('p-desc').value,
-      updatedAt: new Date()
+  const paymentForm = document.getElementById('admin-payment-form');
+  if (paymentForm) {
+    paymentForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('qr-save-btn');
+      btn.disabled = true;
+      try {
+        const upiId = document.getElementById('qr-upi-id').value.trim();
+        const merchantName = document.getElementById('qr-merchant-name').value.trim();
+        await setDoc(doc(db, "settings", "payment"), { upiId, merchantName, updatedAt: new Date() });
+        adminUpiConfig = { upiId, merchantName };
+        alert("UPI Settings Saved!");
+      } catch(err) { alert("Error: " + err.message); }
+      finally { btn.disabled = false; }
     };
+  }
 
-    try {
-      if (editingProductId) {
-        await updateDoc(doc(db, "products", editingProductId), payload);
-        alert("Product Updated!");
-      } else {
-        payload.createdAt = new Date();
-        await addDoc(collection(db, "products"), payload);
-        alert("Product Published!");
+  const catForm = document.getElementById('admin-cat-form');
+  if (catForm) {
+    catForm.onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        const name = document.getElementById('c-name').value.trim();
+        await addDoc(collection(db, "categories"), { name, createdAt: new Date() });
+        alert(`Category "${name}" added!`);
+        catForm.reset();
+        await loadCategoryDropdown();
+        loadCategoriesTable();
+      } catch(err) { alert("Error: " + err.message); }
+    };
+  }
+
+  const bannerForm = document.getElementById('admin-banner-form');
+  if (bannerForm) {
+    bannerForm.onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        await addDoc(collection(db, "banners"), {
+          title: document.getElementById('b-title').value,
+          subtitle: document.getElementById('b-subtitle').value,
+          imageUrl: document.getElementById('b-image').value,
+          createdAt: new Date()
+        });
+        alert("Banner Added!");
+        bannerForm.reset();
+        loadBannersTable();
+      } catch(err) { alert("Error: " + err.message); }
+    };
+  }
+
+  const prodForm = document.getElementById('seller-add-form');
+  if (prodForm) {
+    prodForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const sizeInput = document.getElementById('p-size');
+      
+      const payload = {
+        title: document.getElementById('p-title').value,
+        category: document.getElementById('p-category').value,
+        price: parseFloat(document.getElementById('p-price').value),
+        tag: document.getElementById('p-tag').value || '',
+        size: sizeInput ? sizeInput.value.trim() : '',
+        imageUrl: document.getElementById('p-image').value,
+        description: document.getElementById('p-desc').value,
+        updatedAt: new Date()
+      };
+
+      try {
+        if (editingProductId) {
+          await updateDoc(doc(db, "products", editingProductId), payload);
+          alert("Product Updated!");
+        } else {
+          payload.createdAt = new Date();
+          await addDoc(collection(db, "products"), payload);
+          alert("Product Published!");
+        }
+        window.resetProductForm();
+        loadProductsTable();
+      } catch(err) { 
+        console.error("Firestore Error:", err);
+        alert("Error: " + err.message); 
       }
-      window.resetProductForm();
-      loadProductsTable();
-    } catch(err) { alert("Error: " + err.message); }
-  };
+    };
+  }
 }
 
 // Global Actions & Helpers
 window.resetProductForm = () => {
   editingProductId = null;
-  document.getElementById('seller-add-form').reset();
-  document.getElementById('p-size').value = '';
+  const form = document.getElementById('seller-add-form');
+  if (form) form.reset();
   document.getElementById('prod-form-heading').innerText = "4. Publish / Edit Product";
   document.getElementById('prod-submit-btn').innerText = "PUBLISH PRODUCT";
   document.getElementById('cancel-edit-btn').style.display = "none";
@@ -248,7 +258,10 @@ window.startEditProduct = async (id) => {
     document.getElementById('p-category').value = data.category || 'General';
     document.getElementById('p-price').value = data.price || 0;
     document.getElementById('p-tag').value = data.tag || '';
-    document.getElementById('p-size').value = data.size || '';
+    
+    const sizeInput = document.getElementById('p-size');
+    if (sizeInput) sizeInput.value = data.size || '';
+
     document.getElementById('p-image').value = data.imageUrl || '';
     document.getElementById('p-desc').value = data.description || '';
 
@@ -277,7 +290,6 @@ window.updateOrderStatus = async (orderId, newStatus) => {
   } catch(err) { alert("Error updating status: " + err.message); }
 };
 
-// Seller Reports & Commission Management
 window.updateSellerReport = async (reportId) => {
   const statusSelect = document.getElementById(`report-status-${reportId}`);
   const commissionInput = document.getElementById(`report-comm-${reportId}`);
@@ -300,6 +312,7 @@ window.updateSellerReport = async (reportId) => {
 
 async function loadSellerReportsForAdmin() {
   const container = document.getElementById('admin-seller-reports-list');
+  if (!container) return;
   try {
     const q = query(collection(db, "customer_reports"), orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
@@ -369,7 +382,6 @@ async function loadSellerReportsForAdmin() {
   }
 }
 
-// WhatsApp Generator
 window.sendWhatsAppNotice = (encodedOrderData) => {
   try {
     const orderData = JSON.parse(decodeURIComponent(encodedOrderData));
@@ -387,8 +399,7 @@ window.sendWhatsAppNotice = (encodedOrderData) => {
       const qty = item.quantity || 1;
       const price = item.price || 0;
       const itemTotal = price * qty;
-      const sizeTag = item.selectedSize ? ` (${item.selectedSize})` : '';
-      return `  ${idx + 1}. *${item.title}${sizeTag}*\n     └ Qty: ${qty} x ₹${price} = ₹${itemTotal.toFixed(2)}`;
+      return `  ${idx + 1}. *${item.title}*\n     └ Qty: ${qty} x ₹${price} = ₹${itemTotal.toFixed(2)}`;
     }).join('\n');
 
     const formattedDate = orderData.createdAt 
@@ -429,11 +440,10 @@ ${itemsFormatted}
     window.open(`https://wa.me/${formattedPhone}?text=${encodedMsg}`, '_blank');
   } catch (err) {
     console.error("WhatsApp Message Error:", err);
-    alert("WhatsApp message generate karne me issue aaya: " + err.message);
+    alert("WhatsApp message error: " + err.message);
   }
 };
 
-// Data Loaders
 async function loadCategoryDropdown() {
   const select = document.getElementById('p-category');
   if (!select) return;
@@ -451,6 +461,7 @@ async function loadCategoryDropdown() {
 
 async function loadOrders() {
   const container = document.getElementById('admin-orders-list');
+  if (!container) return;
   try {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
@@ -461,7 +472,7 @@ async function loadOrders() {
         <tbody>
           ${snap.docs.map(doc => {
             const o = doc.data();
-            const items = (o.items || []).map(i => `${i.title}${i.selectedSize ? ' (' + i.selectedSize + ')' : ''} (x${i.quantity || 1})`).join('<br/>');
+            const items = (o.items || []).map(i => `${i.title} (x${i.quantity || 1})`).join('<br/>');
             const status = o.status || 'Pending';
             const customerPhone = o.customerPhone || o.phone || 'N/A';
 
@@ -519,6 +530,7 @@ async function loadOrders() {
 
 async function loadCategoriesTable() {
   const container = document.getElementById('admin-categories-list');
+  if (!container) return;
   try {
     const snap = await getDocs(collection(db, "categories"));
     if (snap.empty) { container.innerHTML = '<p style="color:#888;">No categories.</p>'; return; }
@@ -535,6 +547,7 @@ async function loadCategoriesTable() {
 
 async function loadBannersTable() {
   const container = document.getElementById('admin-banners-list');
+  if (!container) return;
   try {
     const snap = await getDocs(collection(db, "banners"));
     if (snap.empty) { container.innerHTML = '<p style="color:#888;">No banners.</p>'; return; }
@@ -551,12 +564,13 @@ async function loadBannersTable() {
 
 async function loadProductsTable() {
   const container = document.getElementById('admin-items-list');
+  if (!container) return;
   try {
     const snap = await getDocs(collection(db, "products"));
     if (snap.empty) { container.innerHTML = '<p style="color:#888;">No products available.</p>'; return; }
     container.innerHTML = `
       <table>
-        <thead><tr><th>Image</th><th>Title</th><th>Size</th><th>Price</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Image</th><th>Title</th><th>Price</th><th>Actions</th></tr></thead>
         <tbody>
           ${snap.docs.map(d => {
             const p = d.data();
@@ -564,7 +578,6 @@ async function loadProductsTable() {
               <tr>
                 <td><img src="${p.imageUrl}" style="width:36px; height:36px; object-fit:contain;"/></td>
                 <td><b>${p.title}</b></td>
-                <td><small style="color:#555;">${p.size || 'N/A'}</small></td>
                 <td>₹${p.price}</td>
                 <td>
                   <button class="btn btn-primary" onclick="startEditProduct('${d.id}')">Edit</button>
