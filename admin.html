@@ -25,12 +25,13 @@
     .btn-orange { background: #fb641b; color: #fff; }
     .btn-danger { background: #d32f2f; color: #fff; }
     .btn-secondary { background: #666; color: #fff; }
+    .btn-success { background: #2e7d32; color: #fff; }
     .status-badge { padding: 4px 8px; border-radius: 3px; font-weight: 700; font-size: 0.75rem; display: inline-block; }
-    .status-Pending { background: #fff3cd; color: #856404; }
+    .status-Pending, .status-pending { background: #fff3cd; color: #856404; }
     .status-Processing { background: #cce5ff; color: #004085; }
     .status-Shipped { background: #e2e3e5; color: #383d41; }
-    .status-Delivered { background: #d4edda; color: #155724; }
-    .status-Cancelled { background: #f8d7da; color: #721c24; }
+    .status-Delivered, .status-approved, .status-Accepted { background: #d4edda; color: #155724; }
+    .status-Cancelled, .status-rejected { background: #f8d7da; color: #721c24; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
     th { background: #f8f9fa; font-weight: 700; }
@@ -40,7 +41,10 @@
 
   <header class="admin-header">
     <h1>Arcanix CMS Panel</h1>
-    <a href="index.html">← Back to Store</a>
+    <div>
+      <a href="seller.html" style="margin-right: 15px; color: #fff; background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px;">Seller Portal</a>
+      <a href="index.html">← Back to Store</a>
+    </div>
   </header>
 
   <div class="admin-container" id="admin-view">
