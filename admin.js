@@ -94,6 +94,10 @@ async function renderAdminUI() {
           </div>
           <div class="form-group"><label>Price (₹)</label><input type="number" step="0.01" id="p-price" required placeholder="499"/></div>
           <div class="form-group"><label>Offer Tag</label><input type="text" id="p-tag" placeholder="Hot Deal"/></div>
+          
+          <!-- Size Slot Field -->
+          <div class="form-group"><label>Available Sizes</label><input type="text" id="p-size" placeholder="S, M, L, XL or Free Size"/></div>
+
           <div class="form-group full"><label>Image URL</label><input type="url" id="p-image" required placeholder="https://..."/></div>
           <div class="form-group full"><label>Description</label><textarea id="p-desc" rows="3" required placeholder="Product specifications..."></textarea></div>
         </div>
@@ -110,7 +114,7 @@ async function renderAdminUI() {
       <div id="admin-orders-list" style="overflow-x: auto;">Loading Orders...</div>
     </div>
 
-    <!-- 5. Seller Customer Lead Reports & Commission Approvals (NEW SELLER SYSTEM MERGED) -->
+    <!-- 5. Seller Customer Lead Reports & Commission Approvals -->
     <div class="card">
       <div class="card-title" style="color:#2e7d32;">6. Sub-Admin / Seller Customer Reports & Commission Approval</div>
       <div id="admin-seller-reports-list" style="overflow-x: auto;">Loading Seller Reports...</div>
@@ -198,6 +202,7 @@ function bindEvents() {
       category: document.getElementById('p-category').value,
       price: parseFloat(document.getElementById('p-price').value),
       tag: document.getElementById('p-tag').value || '',
+      size: document.getElementById('p-size').value.trim() || '',
       imageUrl: document.getElementById('p-image').value,
       description: document.getElementById('p-desc').value,
       updatedAt: new Date()
@@ -222,6 +227,7 @@ function bindEvents() {
 window.resetProductForm = () => {
   editingProductId = null;
   document.getElementById('seller-add-form').reset();
+  document.getElementById('p-size').value = '';
   document.getElementById('prod-form-heading').innerText = "4. Publish / Edit Product";
   document.getElementById('prod-submit-btn').innerText = "PUBLISH PRODUCT";
   document.getElementById('cancel-edit-btn').style.display = "none";
@@ -242,6 +248,7 @@ window.startEditProduct = async (id) => {
     document.getElementById('p-category').value = data.category || 'General';
     document.getElementById('p-price').value = data.price || 0;
     document.getElementById('p-tag').value = data.tag || '';
+    document.getElementById('p-size').value = data.size || '';
     document.getElementById('p-image').value = data.imageUrl || '';
     document.getElementById('p-desc').value = data.description || '';
 
@@ -270,9 +277,7 @@ window.updateOrderStatus = async (orderId, newStatus) => {
   } catch(err) { alert("Error updating status: " + err.message); }
 };
 
-// ====================================================
-// NEW SELLER REPORT & COMMISSION MANAGEMENT (ADMIN CONTROL)
-// ====================================================
+// Seller Reports & Commission Management
 window.updateSellerReport = async (reportId) => {
   const statusSelect = document.getElementById(`report-status-${reportId}`);
   const commissionInput = document.getElementById(`report-comm-${reportId}`);
@@ -364,16 +369,14 @@ async function loadSellerReportsForAdmin() {
   }
 }
 
-// ====================================================
-// WHATSAPP FULL DETAILED RECEIPT GENERATOR FUNCTION
-// ====================================================
+// WhatsApp Generator
 window.sendWhatsAppNotice = (encodedOrderData) => {
   try {
     const orderData = JSON.parse(decodeURIComponent(encodedOrderData));
 
     const phone = orderData.customerPhone;
     if (!phone || phone === 'N/A' || phone === 'undefined') {
-      alert("Customer phone number not available! (Customer ne check out me number enter nahi kiya hai)");
+      alert("Customer phone number not available!");
       return;
     }
 
@@ -384,7 +387,8 @@ window.sendWhatsAppNotice = (encodedOrderData) => {
       const qty = item.quantity || 1;
       const price = item.price || 0;
       const itemTotal = price * qty;
-      return `  ${idx + 1}. *${item.title}*\n     └ Qty: ${qty} x ₹${price} = ₹${itemTotal.toFixed(2)}`;
+      const sizeTag = item.selectedSize ? ` (${item.selectedSize})` : '';
+      return `  ${idx + 1}. *${item.title}${sizeTag}*\n     └ Qty: ${qty} x ₹${price} = ₹${itemTotal.toFixed(2)}`;
     }).join('\n');
 
     const formattedDate = orderData.createdAt 
@@ -457,7 +461,7 @@ async function loadOrders() {
         <tbody>
           ${snap.docs.map(doc => {
             const o = doc.data();
-            const items = (o.items || []).map(i => `${i.title} (x${i.quantity || 1})`).join('<br/>');
+            const items = (o.items || []).map(i => `${i.title}${i.selectedSize ? ' (' + i.selectedSize + ')' : ''} (x${i.quantity || 1})`).join('<br/>');
             const status = o.status || 'Pending';
             const customerPhone = o.customerPhone || o.phone || 'N/A';
 
@@ -552,7 +556,7 @@ async function loadProductsTable() {
     if (snap.empty) { container.innerHTML = '<p style="color:#888;">No products available.</p>'; return; }
     container.innerHTML = `
       <table>
-        <thead><tr><th>Image</th><th>Title</th><th>Price</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Image</th><th>Title</th><th>Size</th><th>Price</th><th>Actions</th></tr></thead>
         <tbody>
           ${snap.docs.map(d => {
             const p = d.data();
@@ -560,6 +564,7 @@ async function loadProductsTable() {
               <tr>
                 <td><img src="${p.imageUrl}" style="width:36px; height:36px; object-fit:contain;"/></td>
                 <td><b>${p.title}</b></td>
+                <td><small style="color:#555;">${p.size || 'N/A'}</small></td>
                 <td>₹${p.price}</td>
                 <td>
                   <button class="btn btn-primary" onclick="startEditProduct('${d.id}')">Edit</button>
